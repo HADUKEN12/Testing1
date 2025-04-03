@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Archive and Reset</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            padding: 8px 16px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        .reset-btn {
+            background-color: #ff4d4d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+        }
+        .download-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+        }
+        .status-container {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            display: none;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .archive-section {
+            margin-bottom: 20px;
+        }
+        .back-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+        .back-btn:hover {
+            background-color: #0056b3;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Data Archive and Reset System</h1>
+        <a href="settings.html" class="back-btn">Back to Settings</a>
+    </div>
+    
+    <div class="container">
+        <h2>Archive and Reset Database Records</h2>
+        <p>This tool will archive all current data in the following tables:</p>
+        <ul>
+            <li>OT Records</li>
+            <li>Leave Records</li>
+            <li>MT Notifications</li>
+        </ul>
+        <p><strong>Warning:</strong> After archiving, all current data will be reset. This action cannot be undone.</p>
+        
+        <button id="archiveBtn" class="reset-btn">Archive and Reset Data</button>
+    </div>
+    
+    <div id="statusContainer" class="status-container">
+        <h3 id="statusTitle">Operation Status</h3>
+        <p id="statusMessage"></p>
+        <div id="metadataContainer"></div>
+    </div>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <!-- Add SheetJS library -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+    
+    <script>
+        // Firebase configuration - replace with your own config
+        const firebaseConfig = {
+            apiKey: "AIzaSyDzNOjp4SXZSL5z6A35pxNU34Ts67pGlwM",
+        authDomain: "logintesting-64bd1.firebaseapp.com",
+        databaseURL: "https://logintesting-64bd1-default-rtdb.firebaseio.com",
+        projectId: "logintesting-64bd1",
+        storageBucket: "logintesting-64bd1.appspot.com",
+        messagingSenderId: "1065274423800",
+        appId: "1:1065274423800:web:d2e62d59aa94032546be0d"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const otRecordsRef = database.ref('otRecords');
+        const leaveRecordsRef = database.ref('leaveRecords');
+        const notifyRecordsRef = database.ref('MTnotify');
+
+        const archiveDataRef = database.ref('archivedData');
+
+        const archiveOtRecordsRef = database.ref('archivedOtRecords');
+        const archiveLeaveRecordsRef = database.ref('archivedLeaveRecords');
+        const archiveNotifyRecordsRef = database.ref('archivedNotifyRecords');
+
+        function resetData() {
+            if (confirm("Are you sure you want to reset all counters? Current data will be archived.")) {
+                // Get current timestamp for the archive ID
+                const timestamp = new Date().toISOString();
+                const archiveId = timestamp.replace(/[.:-]/g, '_');
+                
+                // Create a copy of the current data with timestamp
+                const dataToArchive = {
+                    timestamp: timestamp,
+                    archivedAt: firebase.database.ServerValue.TIMESTAMP
+                };
+                
+                // Get current data from all tables
+                Promise.all([
+                    otRecordsRef.once('value'),
+                    leaveRecordsRef.once('value'), 
+                    notifyRecordsRef.once('value')
+                ]).then(([otSnapshot, leaveSnapshot, notifySnapshot]) => {
+                    // Archive the data
+                    const archivePromises = [
+                        archiveOtRecordsRef.child(archiveId).set(otSnapshot.val()),
+                        archiveLeaveRecordsRef.child(archiveId).set(leaveSnapshot.val()),
+                        archiveNotifyRecordsRef.child(archiveId).set(notifySnapshot.val())
+                    ];
+
+                    return Promise.all(archivePromises).then(() => {
+                        // After successful archive, reset current data
+                        const resetPromises = [
+                            otRecordsRef.remove(),
+                            leaveRecordsRef.remove(),
+                            notifyRecordsRef.remove()
+                        ];
+                        return Promise.all(resetPromises);
+                    });
+                }).then(() => {
+                    // Show success message
+                    const statusContainer = document.getElementById('statusContainer');
+                    statusContainer.style.display = 'block';
+                    statusContainer.className = 'status-container success';
+                    document.getElementById('statusTitle').textContent = 'Success';
+                    document.getElementById('statusMessage').textContent = 'Data has been archived and reset successfully.';
+                }).catch(error => {
+                    // Show error message
+                    const statusContainer = document.getElementById('statusContainer');
+                    statusContainer.style.display = 'block';
+                    statusContainer.className = 'status-container error';
+                    document.getElementById('statusTitle').textContent = 'Error';
+                    document.getElementById('statusMessage').textContent = 'Failed to archive and reset data: ' + error.message;
+                });
+              
+            }
+        }
+
+        // Convert data to Excel and trigger download
+        function exportToExcel(tableId, filename = 'archive_data') {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+            
+            const rows = Array.from(table.querySelectorAll('tr'));
+            const data = [];
+            
+            // Get headers
+            const headers = Array.from(rows[0].querySelectorAll('th')).map(th => th.textContent);
+            
+            // Get data rows
+            for (let i = 1; i < rows.length; i++) {
+                const rowData = {};
+                const cells = rows[i].querySelectorAll('td');
+                
+                headers.forEach((header, index) => {
+                    rowData[header] = cells[index].textContent;
+                });
+                
+                data.push(rowData);
+            }
+            
+            // Create worksheet from data
+            const worksheet = XLSX.utils.json_to_sheet(data);
+            
+            // Create workbook and add the worksheet
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Archive Data');
+            
+            // Generate Excel file and download
+            XLSX.writeFile(workbook, filename + '.xlsx');
+        }
+
+        // Load and display archived data
+        function displayArchivedData() {
+            // Get references to archive locations
+            const archiveRefs = {
+                'OT Records': archiveOtRecordsRef,
+                'Leave Records': archiveLeaveRecordsRef, 
+                'MT Notifications': archiveNotifyRecordsRef
+            };
+
+            // Create container for archived data
+            const archiveContainer = document.createElement('div');
+            archiveContainer.className = 'container';
+            archiveContainer.innerHTML = '<h2>Archived Data</h2>';
+            document.body.appendChild(archiveContainer);
+
+            // Load data from each archive
+            Object.entries(archiveRefs).forEach(([name, ref], index) => {
+                ref.orderByKey().limitToLast(5).once('value')
+                    .then((snapshot) => {
+                        const sectionDiv = document.createElement('div');
+                        sectionDiv.className = 'archive-section';
+                        sectionDiv.innerHTML = `<h3>${name}</h3>`;
+
+                        if (!snapshot.exists()) {
+                            sectionDiv.innerHTML += '<p>No archived data available</p>';
+                        } else {
+                            const archives = [];
+                            snapshot.forEach((childSnapshot) => {
+                                archives.push({
+                                    id: childSnapshot.key,
+                                    data: childSnapshot.val()
+                                });
+                            });
+
+                            // Create table for this archive type
+                            const tableId = `archive-table-${index}`;
+                            const table = document.createElement('table');
+                            table.id = tableId;
+                            
+                            // Create table header
+                            const thead = document.createElement('thead');
+                            const headerRow = document.createElement('tr');
+                            const headers = ['Archive Date', 'Records', 'Actions'];
+                            
+                            headers.forEach(headerText => {
+                                const th = document.createElement('th');
+                                th.textContent = headerText;
+                                headerRow.appendChild(th);
+                            });
+                            
+                            thead.appendChild(headerRow);
+                            table.appendChild(thead);
+                            
+                            // Create table body
+                            const tbody = document.createElement('tbody');
+                            
+                            archives.reverse().forEach((archive) => {
+                                const archiveDate = new Date(archive.id.replace(/_/g, '-')).toLocaleString();
+                                const recordCount = archive.data ? Object.keys(archive.data).length : 0;
+                                
+                                const row = document.createElement('tr');
+                                
+                                const dateCell = document.createElement('td');
+                                dateCell.textContent = archiveDate;
+                                
+                                const countCell = document.createElement('td');
+                                countCell.textContent = recordCount;
+                                
+                                const actionsCell = document.createElement('td');
+                                // Store the data as attribute for download
+                                const downloadBtn = document.createElement('button');
+                                downloadBtn.textContent = 'Download';
+                                downloadBtn.className = 'download-btn';
+                                downloadBtn.setAttribute('data-archive-id', archive.id);
+                                downloadBtn.setAttribute('data-archive-type', name);
+                                
+                                downloadBtn.addEventListener('click', function() {
+                                    const archiveId = this.getAttribute('data-archive-id');
+                                    const archiveType = this.getAttribute('data-archive-type');
+                                    downloadArchiveData(archiveType, archiveId);
+                                });
+                                
+                                actionsCell.appendChild(downloadBtn);
+                                
+                                row.appendChild(dateCell);
+                                row.appendChild(countCell);
+                                row.appendChild(actionsCell);
+                                
+                                tbody.appendChild(row); 
+                            });
+                            
+                            table.appendChild(tbody);
+                            sectionDiv.appendChild(table);
+                            
+                            // Add export all button
+                            const exportButton = document.createElement('button');
+                            exportButton.textContent = `Export All ${name}`;
+                            exportButton.className = 'download-btn';
+                            exportButton.style.marginTop = '10px';
+                            exportButton.addEventListener('click', function() {
+                                exportToExcel(tableId, `${name.replace(/\s+/g, '_')}_archives`);
+                            });
+                            
+                            sectionDiv.appendChild(exportButton);
+                        }
+
+                        archiveContainer.appendChild(sectionDiv);
+                    })
+                    .catch(error => {
+                        console.error(`Error loading ${name} archives:`, error);
+                    });
+            });
+        }
+
+        // Function to download a specific archive
+        function downloadArchiveData(archiveType, archiveId) {
+            let ref;
+            switch(archiveType) {
+                case 'OT Records':
+                    ref = archiveOtRecordsRef;
+                    break;
+                case 'Leave Records':
+                    ref = archiveLeaveRecordsRef;
+                    break;
+                case 'MT Notifications':
+                    ref = archiveNotifyRecordsRef;
+                    break;
+                default:
+                    console.error('Unknown archive type:', archiveType);
+                    return;
+            }
+            
+            ref.child(archiveId).once('value')
+                .then((snapshot) => {
+                    const data = snapshot.val();
+                    if (!data) {
+                        alert('No data available for download');
+                        return;
+                    }
+                    
+                    // Convert data to array of objects
+                    const dataArray = [];
+                    Object.entries(data).forEach(([key, value]) => {
+                        // If value is an object, flatten it
+                        if (typeof value === 'object' && value !== null) {
+                            value = {...value, id: key};
+                        } else {
+                            value = {id: key, value: value};
+                        }
+                        dataArray.push(value);
+                    });
+                    
+                    // Create worksheet from data
+                    const worksheet = XLSX.utils.json_to_sheet(dataArray);
+                    
+                    // Create workbook and add the worksheet
+                    const workbook = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(workbook, worksheet, archiveType);
+                    
+                    // Generate Excel file and download
+                    const fileName = `${archiveType.replace(/\s+/g, '_')}_${archiveId}`;
+                    XLSX.writeFile(workbook, fileName + '.xlsx');
+                })
+                .catch(error => {
+                    console.error('Error downloading archive data:', error);
+                    alert('Failed to download data: ' + error.message);
+                });
+        }
+
+        // Add button event listener to display archived data
+        document.getElementById('archiveBtn').addEventListener('click', resetData);
+
+        // Load archived data when page loads
+        document.addEventListener('DOMContentLoaded', displayArchivedData);
+    </script>
+</body>
+</html> 

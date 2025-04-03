@@ -1,0 +1,129 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <script>
+        function calculateTotalHours() {
+            let totalMinutes = 0;
+            const rows = document.querySelectorAll('tbody tr');
+
+            rows.forEach(row => {
+                // Get input values with better error handling
+                const startHour = parseInt(row.querySelector('.start-hour').value, 10) || 0;
+                const startMinute = parseInt(row.querySelector('.start-minute').value, 10) || 0;
+                const startPeriod = row.querySelector('.start-period').value;
+                const endHour = parseInt(row.querySelector('.end-hour').value, 10) || 0;
+                const endMinute = parseInt(row.querySelector('.end-minute').value, 10) || 0;
+                const endPeriod = row.querySelector('.end-period').value;
+                const breakHour = parseInt(row.querySelector('.break-hour').value, 10) || 0;
+                const breakMinute = parseInt(row.querySelector('.break-minute').value, 10) || 0;
+
+                // Convert to 24-hour format and minutes
+                let startTimeInMinutes = ((startHour % 12) + (startPeriod === 'PM' ? 12 : 0)) * 60 + startMinute;
+                let endTimeInMinutes = ((endHour % 12) + (endPeriod === 'PM' ? 12 : 0)) * 60 + endMinute;
+                if (startPeriod === 'AM' && startHour === 12) startTimeInMinutes = startMinute; // Handle 12 AM
+                if (endPeriod === 'AM' && endHour === 12) endTimeInMinutes = endMinute; // Handle 12 AM
+                let breakTimeInMinutes = (breakHour * 60) + breakMinute;
+
+                // Calculate daily total time
+                let dailyTotalMinutes = endTimeInMinutes - startTimeInMinutes - breakTimeInMinutes;
+                if (dailyTotalMinutes < 0) dailyTotalMinutes += 1440; // Add 24 hours (1440 minutes) for overnight shifts
+
+                // Convert minutes to HH:MM format
+                let hours = Math.floor(Math.abs(dailyTotalMinutes) / 60);
+                let minutes = Math.abs(dailyTotalMinutes) % 60;
+
+                row.querySelector('.daily-total').textContent = `${hours}:${minutes.toString().padStart(2, '0')}`;
+                totalMinutes += dailyTotalMinutes;
+            });
+
+            // Convert total minutes to HH:MM format
+            let totalHours = Math.floor(Math.abs(totalMinutes) / 60);
+            let totalRemainingMinutes = Math.abs(totalMinutes) % 60;
+
+            document.querySelector('.total-hours').textContent = 
+                `${totalHours}:${totalRemainingMinutes.toString().padStart(2, '0')}`;
+        }
+    </script>
+</head>
+<body class="bg-gray-100">
+    <div class="max-w-4xl mx-auto p-4">
+        <div class="bg-white shadow-md rounded-lg p-4">
+            <div class="flex justify-between items-center mb-4">
+                <input type="text" placeholder="Enter your name..." class="border border-gray-300 rounded-lg p-2 w-full max-w-xs">
+                <div class="flex items-center space-x-2">
+                    <input type="date" class="border border-gray-300 rounded-lg p-2">
+                    <span>-</span>
+                    <input type="date" class="border border-gray-300 rounded-lg p-2">
+                </div>
+            </div>
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr>
+                        <th class="border-b p-2">Day</th>
+                        <th class="border-b p-2">Start time</th>
+                        <th class="border-b p-2">End time</th>
+                        <th class="border-b p-2">Break deduction</th>
+                        <th class="border-b p-2">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="border-b p-2">Monday</td>
+                        <td class="border-b p-2">
+                            <div class="flex items-center space-x-2">
+                                <input type="number" min="0" max="12" value="0" class="start-hour border border-gray-300 rounded-lg p-2 w-12">
+                                <span>:</span>
+                                <input type="number" min="0" max="59" value="00" class="start-minute border border-gray-300 rounded-lg p-2 w-12">
+                                <select class="start-period border border-gray-300 rounded-lg p-2">
+                                    <option>AM</option>
+                                    <option>PM</option>
+                                </select>
+                            </div>
+                        </td>
+                        <td class="border-b p-2">
+                            <div class="flex items-center space-x-2">
+                                <input type="number" min="0" max="12" value="0" class="end-hour border border-gray-300 rounded-lg p-2 w-12">
+                                <span>:</span>
+                                <input type="number" min="0" max="59" value="00" class="end-minute border border-gray-300 rounded-lg p-2 w-12">
+                                <select class="end-period border border-gray-300 rounded-lg p-2">
+                                    <option>AM</option>
+                                    <option>PM</option>
+                                </select>
+                            </div>
+                        </td>
+                        <td class="border-b p-2">
+                            <div class="flex items-center space-x-2">
+                                <input type="number" min="0" max="12" value="0" class="break-hour border border-gray-300 rounded-lg p-2 w-12">
+                                <span>:</span>
+                                <input type="number" min="0" max="59" value="00" class="break-minute border border-gray-300 rounded-lg p-2 w-12">
+                            </div>
+                        </td>
+                        <td class="border-b p-2 daily-total">0.00</td>
+                    </tr>
+             
+                  
+                        
+                </tbody>
+            </table>
+            <div class="flex justify-between items-center mt-4">
+                <div class="flex items-center space-x-2">
+                    <input type="checkbox" id="advanced-options" class="h-4 w-4">
+                    <label for="advanced-options" class="text-gray-600">Advanced options</label>
+                </div>
+                <div class="text-gray-600">Total hours: <span class="font-bold total-hours">0.00</span></div>
+            </div>
+            <div class="flex justify-between items-center mt-4">
+                <button class="bg-gray-200 text-gray-600 px-4 py-2 rounded-lg">Reset</button>
+                <div class="flex space-x-2">
+                    <button class="bg-gray-200 text-gray-600 px-4 py-2 rounded-lg">Save as Draft</button>
+                    <button onclick="calculateTotalHours()" class="bg-blue-500 text-white px-4 py-2 rounded-lg">Calculate Total</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

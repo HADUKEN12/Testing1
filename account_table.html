@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Account Management</title>
+    <style>
+        /* Add font imports */
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+        
+        /* Apply default font to everything */
+        * {
+            font-family: 'Roboto', Arial, sans-serif;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .table-container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            background-color: #ffffff;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .edit-btn {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .edit-btn:hover {
+            background-color: #45a049;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f5f5f5;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .edit-user-btn, .delete-user-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .edit-user-btn {
+            background-color: #2196F3;
+            color: white;
+        }
+
+        .edit-user-btn:hover {
+            background-color: #1976D2;
+        }
+
+        .delete-user-btn {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .delete-user-btn:hover {
+            background-color: #d32f2f;
+        }
+
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            transform: translateX(200%);
+            transition: transform 0.3s ease-in-out;
+            z-index: 1000;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background-color: #4CAF50;
+        }
+
+        .notification.error {
+            background-color: #f44336;
+        }
+
+       
+        .popup-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .popup-overlay.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .popup-form {
+            background-color: white;
+            padding: 40px;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 600px;
+            position: relative;
+            transform: translateY(20px);
+            transition: transform 0.3s ease-in-out;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .popup-overlay.show .popup-form {
+            transform: translateY(0);
+        }
+
+        .popup-form h3 {
+            margin: 0 0 30px 0;
+            font-weight: 600;
+            font-size: 24px;
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 14px;
+            color: #455a64;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background-color: white;
+        }
+
+        .form-group input:hover,
+        .form-group select:hover {
+            border-color: #90a4ae;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+        }
+
+        .form-group input.readonly-field {
+            background-color: #f8f9fa;
+            border-color: #e0e0e0;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        .password-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #f0f0f0;
+        }
+
+        .password-section h4 {
+            margin: 0 0 20px 0;
+            color: #2c3e50;
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        .form-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: space-between;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #f0f0f0;
+        }
+
+        .form-back-btn,
+        .edit-btn,
+        .delete-user-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .form-back-btn {
+            background-color: #607D8B;
+            color: white;
+        }
+
+        .form-back-btn:hover {
+            background-color: #455A64;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .edit-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .edit-btn:hover {
+            background-color: #45a049;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .delete-user-btn {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .delete-user-btn:hover {
+            background-color: #d32f2f;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-action-buttons {
+            display: flex;
+            gap: 15px;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .close-btn:hover {
+            background-color: #f5f5f5;
+            color: #333;
+            transform: rotate(90deg);
+        }
+
+        /* Back Button Styles */
+        .back-btn {
+            padding: 10px 20px;
+            background-color: #607D8B;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .back-btn i {
+            margin-right: 5px;
+        }
+        
+        .back-btn:hover {
+            background-color: #455A64;
+        }
+        
+        /* Update table header to accommodate back button */
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .header-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* Additional styling for form elements */
+        .popup-form h3 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-weight: 500;
+            font-size: 20px;
+            color: #2c3e50;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            font-size: 14px;
+            color: #455a64;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #607D8B;
+            box-shadow: 0 0 0 2px rgba(96, 125, 139, 0.2);
+        }
+        
+        .password-section h4 {
+            margin: 0 0 15px 0;
+            color: #2c3e50;
+            font-weight: 500;
+            font-size: 16px;
+        }
+        
+        /* Style all buttons for consistency */
+        button {
+            font-weight: 500;
+            letter-spacing: 0.3px;
+        }
+
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background-color: white;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23455a64' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+            padding-right: 40px;
+        }
+
+        .form-group select:focus {
+            outline: none;
+            border-color: #607D8B;
+            box-shadow: 0 0 0 2px rgba(96, 125, 139, 0.2);
+        }
+
+        .form-group select:hover {
+            border-color: #607D8B;
+        }
+
+        /* Style for disabled select options */
+        .form-group select option[value=""] {
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="table-container">
+        <div class="table-header">
+            <h2>User Accounts</h2>
+            <div class="header-buttons">
+                <button class="back-btn" onclick="goBack()">← Back</button>
+                <button class="edit-btn" onclick="openPopup()">Add New User</button>
+            </div>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Full Name</th>
+                    <th>Role</th>
+                    <th>Department</th>
+                    <th>Email</th>
+                    <th>Contact</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="userTableBody">
+                <!-- User data will be populated here -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Add this popup form HTML after the table container div -->
+    <div class="popup-overlay" id="popupForm">
+        <div class="popup-form">
+            <button class="close-btn" onclick="closePopup()">&times;</button>
+            <h3>Create New User</h3>
+            <form id="createUserForm" onsubmit="createUser(event)">
+                <div class="form-group">
+                    <label for="fullname">Full Name</label>
+                    <input type="text" id="fullname" name="fullname" required>
+                </div>
+                <div class="form-group">
+                    <label for="role">Role</label>
+                    <select id="role" name="role" required onchange="toggleDepartmentField()">
+                        <option value="">Select a role</option>
+                        <option value="hr">HR</option>
+                        <option value="Encoder">Encoder</option>
+                        <option value="Admin">Admin</option>
+                    </select>
+                </div>
+                <div class="form-group" id="departmentGroup" style="display: none;">
+                    <label for="department">Department</label>
+                    <select id="department" name="department">
+                        <option value="">Select a department</option>
+                        <option value="RND">RND</option>
+                        <option value="Operation">Operation</option>
+                        <option value="Technical">Technical</option>
+                        <option value="Inventory">Inventory</option>
+                        <option value="Sales and Marketing">Sales and Marketing</option>
+                        <option value="Engineer">Engineer</option>
+                        <option value="IT">IT</option>
+                        <option value="Administrative">Administrative</option>
+                        <option value="Accounting">Accounting</option>
+                        <option value="QC/QA">QC/QA</option>
+                        <option value="Procurement">Procurement</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="contact">Contact Number</label>
+                    <input type="tel" id="contact" name="contact" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                <div class="form-buttons">
+                    <button type="button" class="form-back-btn" onclick="closePopup()">← Back</button>
+                    <div class="form-action-buttons">
+                        <button type="button" class="delete-user-btn" onclick="closePopup()">Cancel</button>
+                        <button type="submit" class="edit-btn">Create User</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add this new edit popup form HTML before the notification div -->
+    <div class="popup-overlay" id="editPopupForm">
+        <div class="popup-form">
+            <button class="close-btn" onclick="closeEditPopup()">&times;</button>
+            <h3>Edit User</h3>
+            <form id="editUserForm" onsubmit="updateUser(event)">
+                <input type="hidden" id="editUserId">
+                <div class="form-group">
+                    <label for="editUsername">Username</label>
+                    <input type="text" id="editUsername" name="username" readonly class="readonly-field">
+                </div>
+                <div class="form-group">
+                    <label for="editFullname">Full Name</label>
+                    <input type="text" id="editFullname" name="fullname" required>
+                </div>
+                <div class="form-group">
+                    <label for="editRole">Role</label>
+                    <select id="editRole" name="role" required onchange="toggleEditDepartmentField()">
+                        <option value="">Select a role</option>
+                        <option value="hr">HR</option>
+                        <option value="Encoder">Encoder</option>
+                        <option value="Admin">Admin</option>
+                    </select>
+                </div>
+                <div class="form-group" id="editDepartmentGroup" style="display: none;">
+                    <label for="editDepartment">Department</label>
+                    <select id="editDepartment" name="department">
+                        <option value="">Select a department</option>
+                        <option value="RND">RND</option>
+                        <option value="Operation">Operation</option>
+                        <option value="Technical">Technical</option>
+                        <option value="Inventory">Inventory</option>
+                        <option value="Sales and Marketing">Sales and Marketing</option>
+                        <option value="Engineer">Engineer</option>
+                        <option value="IT">IT</option>
+                        <option value="Administrative">Administrative</option>
+                        <option value="Accounting">Accounting</option>
+                        <option value="QC/QA">QC/QA</option>
+                        <option value="Procurement">Procurement</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="editEmail">Email</label>
+                    <input type="email" id="editEmail" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="editContact">Contact Number</label>
+                    <input type="tel" id="editContact" name="contact" required>
+                </div>
+                <div class="password-section">
+                    <h4>Change Password</h4>
+                    <div class="form-group">
+                        <label for="editOldPassword">Current Password</label>
+                        <input type="password" id="editOldPassword" name="oldPassword">
+                    </div>
+                    <div class="form-group">
+                        <label for="editPassword">New Password</label>
+                        <input type="password" id="editPassword" name="password" minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label for="editConfirmPassword">Confirm New Password</label>
+                        <input type="password" id="editConfirmPassword" name="confirmPassword" minlength="6">
+                    </div>
+                </div>
+                <div class="form-buttons">
+                    <button type="button" class="form-back-btn" onclick="closeEditPopup()">← Back</button>
+                    <div class="form-action-buttons">
+                        <button type="button" class="delete-user-btn" onclick="closeEditPopup()">Cancel</button>
+                        <button type="submit" class="edit-btn">Update User</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
+        import { getDatabase, ref, onValue, remove, get, set, update } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDzNOjp4SXZSL5z6A35pxNU34Ts67pGlwM",
+            authDomain: "logintesting-64bd1.firebaseapp.com",
+            databaseURL: "https://logintesting-64bd1-default-rtdb.firebaseio.com",
+            projectId: "logintesting-64bd1",
+            storageBucket: "logintesting-64bd1.appspot.com",
+            messagingSenderId: "1065274423800",
+            appId: "1:1065274423800:web:d2e62d59aa94032546be0d"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        function showNotification(message, isError = false) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = 'notification ' + (isError ? 'error' : 'success');
+            notification.classList.add('show');
+
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        function loadUserAccounts() {
+            const usersRef = ref(db, 'users');
+            onValue(usersRef, (snapshot) => {
+                const userTableBody = document.getElementById('userTableBody');
+                userTableBody.innerHTML = '';
+
+                snapshot.forEach((userSnapshot) => {
+                    const userData = userSnapshot.val();
+                    const userId = userSnapshot.key;
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${userData.fullname || 'N/A'}</td>
+                        <td>${userData.role || 'N/A'}</td>
+                        <td>${userData.department || 'N/A'}</td>
+                        <td>${userData.email || 'N/A'}</td>
+                        <td>${userData.contact || 'N/A'}</td>
+                        <td class="action-buttons">
+                            <button class="edit-user-btn" onclick="openEditPopup('${userId}')">Edit</button>
+                            <button class="delete-user-btn" onclick="deleteUser('${userId}')">Delete</button>
+                        </td>
+                    `;
+                    userTableBody.appendChild(row);
+                });
+            });
+        }
+
+        window.deleteUser = async function(userId) {
+            if (confirm('Are you sure you want to delete this user?')) {
+                try {
+                    const userRef = ref(db, `users/${userId}`);
+                    await remove(userRef);
+                    showNotification('User deleted successfully');
+                } catch (error) {
+                    console.error('Error deleting user:', error);
+                    showNotification('Error deleting user', true);
+                }
+            }
+        };
+
+        // Load user accounts when the page loads
+        window.addEventListener('DOMContentLoaded', loadUserAccounts);
+
+        // Add these new functions
+        window.openPopup = function() {
+            const popup = document.getElementById('popupForm');
+            popup.style.display = 'flex';
+            setTimeout(() => popup.classList.add('show'), 10);
+        }
+
+        window.closePopup = function() {
+            const popup = document.getElementById('popupForm');
+            popup.classList.remove('show');
+            setTimeout(() => {
+                popup.style.display = 'none';
+                document.getElementById('createUserForm').reset();
+            }, 300);
+        }
+
+        window.createUser = async function(event) {
+            event.preventDefault();
+            
+            const formData = {
+                fullname: document.getElementById('fullname').value,
+                role: document.getElementById('role').value,
+                email: document.getElementById('email').value,
+                department: document.getElementById('department').value,
+                contact: document.getElementById('contact').value,
+                password: document.getElementById('password').value
+            };
+
+            // Add department if role is not HR
+            if (formData.role !== 'hr') {
+                const department = document.getElementById('department').value;
+                if (!department) {
+                    showNotification('Please select a department', true);
+                    return;
+                }
+                formData.department = department;
+            }
+
+            try {
+                // Create a user ID from the email (remove special characters)
+                const userId = document.getElementById('fullname').value;
+                
+                // Check if user already exists
+                const userRef = ref(db, `users/${userId}`);
+                const snapshot = await get(userRef);
+                
+                if (snapshot.exists()) {
+                    showNotification('User with this email already exists', true);
+                    return;
+                }
+
+                // Create new user
+                await set(userRef, formData);
+                
+                showNotification('User created successfully');
+                closePopup();
+            } catch (error) {
+                console.error('Error creating user:', error);
+                showNotification('Error creating user', true);
+            }
+        }
+
+        // Add these new functions for edit functionality
+        window.openEditPopup = async function(userId) {
+            const userRef = ref(db, `users/${userId}`);
+            const snapshot = await get(userRef);
+            
+            if (snapshot.exists()) {
+                const userData = snapshot.val();
+                document.getElementById('editUserId').value = userId;
+                document.getElementById('editUsername').value = userId;
+                document.getElementById('editFullname').value = userData.fullname || '';
+                document.getElementById('editRole').value = userData.role || '';
+                document.getElementById('editEmail').value = userData.email || '';
+                document.getElementById('editContact').value = userData.contact || '';
+                
+                // Handle department display
+                const departmentGroup = document.getElementById('editDepartmentGroup');
+                const departmentSelect = document.getElementById('editDepartment');
+                
+                if (userData.role === 'hr') {
+                    departmentGroup.style.display = 'none';
+                    departmentSelect.value = 'hr';
+                } else {
+                    departmentGroup.style.display = 'block';
+                    if (userData.department) {
+                        departmentSelect.value = userData.department;
+                    }
+                }
+                
+                const popup = document.getElementById('editPopupForm');
+                popup.style.display = 'flex';
+                setTimeout(() => popup.classList.add('show'), 10);
+            }
+        }
+
+        window.closeEditPopup = function() {
+            const popup = document.getElementById('editPopupForm');
+            popup.classList.remove('show');
+            setTimeout(() => {
+                popup.style.display = 'none';
+                document.getElementById('editUserForm').reset();
+                document.getElementById('editOldPassword').value = '';
+                document.getElementById('editPassword').value = '';
+                document.getElementById('editConfirmPassword').value = '';
+            }, 300);
+        }
+
+        window.updateUser = async function(event) {
+            event.preventDefault();
+            
+            const userId = document.getElementById('editUserId').value;
+            const oldPassword = document.getElementById('editOldPassword').value;
+            const newPassword = document.getElementById('editPassword').value;
+            const confirmPassword = document.getElementById('editConfirmPassword').value;
+            
+            // Check if user is trying to change password
+            if (newPassword || confirmPassword || oldPassword) {
+                // Verify all password fields are filled
+                if (!oldPassword) {
+                    showNotification('Please enter your current password', true);
+                    return;
+                }
+                if (!newPassword || !confirmPassword) {
+                    showNotification('Please fill in both new password fields', true);
+                    return;
+                }
+                
+                // Verify passwords match
+                if (newPassword !== confirmPassword) {
+                    showNotification('New passwords do not match', true);
+                    return;
+                }
+                
+                // Verify password length
+                if (newPassword.length < 6) {
+                    showNotification('New password must be at least 6 characters', true);
+                    return;
+                }
+
+                // Verify old password
+                try {
+                    const userRef = ref(db, `users/${userId}`);
+                    const snapshot = await get(userRef);
+                    if (snapshot.exists()) {
+                        const userData = snapshot.val();
+                        if (userData.password !== oldPassword) {
+                            showNotification('Current password is incorrect', true);
+                            return;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error verifying password:', error);
+                    showNotification('Error verifying password', true);
+                    return;
+                }
+            }
+
+            const formData = {
+                fullname: document.getElementById('editFullname').value,
+                role: document.getElementById('editRole').value,
+                department: document.getElementById('editDepartment').value,
+                email: document.getElementById('editEmail').value,
+                contact: document.getElementById('editContact').value
+            };
+
+            // Add department if role is not HR
+            if (formData.role !== 'hr') {
+                const department = document.getElementById('editDepartment').value;
+                if (!department) {
+                    showNotification('Please select a department', true);
+                    return;
+                }
+                formData.department = department;
+            }
+
+            // Only include password in update if it's being changed
+            if (newPassword) {
+                formData.password = newPassword;
+            }
+
+            try {
+                const userRef = ref(db, `users/${userId}`);
+                await update(userRef, formData);
+                
+                showNotification('User updated successfully');
+                closeEditPopup();
+            } catch (error) {
+                console.error('Error updating user:', error);
+                showNotification('Error updating user', true);
+            }
+        }
+
+        // Add this new function for the back button
+        window.goBack = function() {
+           
+            window.location.href = './settings.html'; 
+        }
+
+        // Add these new functions for department field toggling
+        window.toggleDepartmentField = function() {
+            const role = document.getElementById('role').value;
+            const departmentGroup = document.getElementById('departmentGroup');
+            const departmentSelect = document.getElementById('department');
+            
+            if (role === 'hr') {
+                departmentGroup.style.display = 'none';
+                departmentSelect.value = 'hr';
+            } else if (role === 'Encoder' || role === 'Admin') {
+                departmentGroup.style.display = 'block';
+            }
+        }
+
+        window.toggleEditDepartmentField = function() {
+            const role = document.getElementById('editRole').value;
+            const departmentGroup = document.getElementById('editDepartmentGroup');
+            const departmentSelect = document.getElementById('editDepartment');
+            
+            if (role === 'hr') {
+                departmentGroup.style.display = 'none';
+                departmentSelect.value = 'hr';
+            } else if (role === 'Encoder' || role === 'Admin') {
+                departmentGroup.style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>

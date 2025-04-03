@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>Recycle Bin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Navbar styling */
+    .navbar {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      background-color: white;
+      border-right: 1px solid #e5e7eb;
+      height: 100%;
+      width: 250px;
+      z-index: 1000;
+      box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+      padding: 1.5rem 0;
+      overflow-y: auto;
+    }
+
+    .navbar.active {
+      display: block;
+    }
+
+    .toggle-btn {
+      position: fixed;
+      top: 1rem;
+      left: 1rem;
+      z-index: 1001;
+      padding: 0.5rem;
+      background-color: white;
+      border-radius: 0.375rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .max-w-7xl {
+      transition: margin-left 0.3s ease;
+    }
+
+    .max-w-7xl.shifted {
+      margin-left: 250px;
+    }
+
+    @media (max-width: 768px) {
+      .max-w-7xl.shifted {
+        margin-left: 0;
+      }
+    }
+
+    /* Table styles */
+    .resizable-table {
+      table-layout: fixed;
+      width: 100%;
+    }
+
+    .resizable-table th,
+    .resizable-table td {
+      padding: 8px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+
+<body class="bg-gray-100">
+  <div class="toggle-btn" onclick="toggleNavbar()">
+    <img src="./navigation.png" alt="Menu Icon" style="width: 20px; height: 20px;"/>
+  </div>
+
+  <nav class="navbar" id="navbar">
+    <ul>
+      <li>
+        <a href="dashhr.html" class="flex items-center px-6 py-3 hover:bg-gray-100">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+          Dashboard
+        </a>
+      </li>
+      <!-- Add other navigation items as needed -->
+    </ul>
+  </nav>
+
+  <div class="max-w-7xl mx-auto p-6" id="mainContent">
+    <div class="bg-white rounded-lg shadow-lg p-6">
+      <h1 class="text-2xl font-bold mb-6">Recycle Bin</h1>
+
+      <!-- Search and filter controls -->
+      <div class="mb-6 flex flex-wrap gap-4">
+        <input type="text" id="searchInput" placeholder="Search..." 
+               class="p-2 border rounded-lg flex-1"/>
+        
+        <select id="filterType" class="p-2 border rounded-lg">
+          <option value="all">All Types</option>
+          <option value="overtime">Overtime Records</option>
+          <option value="leave">Leave Applications</option>
+          <option value="user">User Accounts</option>
+        </select>
+
+        <button onclick="restoreSelected()" 
+                class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
+          Restore Selected
+        </button>
+        
+        <button onclick="permanentlyDeleteSelected()" 
+                class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">
+          Delete Permanently
+        </button>
+      </div>
+
+      <!-- Deleted records table -->
+      <div class="overflow-x-auto">
+        <table class="resizable-table">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="w-10">
+                <input type="checkbox" id="selectAll" onclick="toggleSelectAll()"/>
+              </th>
+              <th>Record Type</th>
+              <th>Details</th>
+              <th>Deleted Date</th>
+              <th>Deleted By</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="deletedRecordsBody">
+            <!-- Records will be dynamically populated here -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
+    import { getDatabase, ref, onValue, remove, set } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDzNOjp4SXZSL5z6A35pxNU34Ts67pGlwM",
+      authDomain: "logintesting-64bd1.firebaseapp.com", 
+      databaseURL: "https://logintesting-64bd1-default-rtdb.firebaseio.com",
+      projectId: "logintesting-64bd1",
+      storageBucket: "logintesting-64bd1.appspot.com",
+      messagingSenderId: "1065274423800",
+      appId: "1:1065274423800:web:d2e62d59aa94032546be0d"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+
+    // Make functions globally available
+    window.toggleNavbar = toggleNavbar;
+    window.toggleSelectAll = toggleSelectAll;
+    window.restoreSelected = restoreSelected;
+    window.permanentlyDeleteSelected = permanentlyDeleteSelected;
+
+    function toggleNavbar() {
+      const navbar = document.getElementById('navbar');
+      const mainContent = document.getElementById('mainContent');
+      navbar.classList.toggle('active');
+      
+      if (window.innerWidth > 768) {
+        mainContent.classList.toggle('shifted');
+      }
+    }
+
+    function loadDeletedRecords() {
+      const deletedRef = ref(database, 'deleted_records');
+      onValue(deletedRef, (snapshot) => {
+        const records = snapshot.val();
+        displayDeletedRecords(records);
+      });
+    }
+
+    function displayDeletedRecords(records) {
+      const tbody = document.getElementById('deletedRecordsBody');
+      tbody.innerHTML = '';
+
+      if (!records) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4">No deleted records found</td></tr>';
+        return;
+      }
+
+      Object.entries(records).forEach(([id, record]) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td><input type="checkbox" class="record-checkbox" data-id="${id}"/></td>
+          <td>${record.type}</td>
+          <td>${record.details}</td>
+          <td>${new Date(record.deletedDate).toLocaleString()}</td>
+          <td>${record.deletedBy}</td>
+          <td>
+            <button onclick="restoreRecord('${id}')" class="text-green-500 hover:text-green-700 mr-2">
+              Restore
+            </button>
+            <button onclick="permanentlyDelete('${id}')" class="text-red-500 hover:text-red-700">
+              Delete
+            </button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // Load records when page loads
+    document.addEventListener('DOMContentLoaded', loadDeletedRecords);
+  </script>
+</body>
+</html>

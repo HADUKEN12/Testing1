@@ -1,0 +1,646 @@
+<html lang="en">
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>
+   Overtime Recording
+  </title>
+  <script src="https://cdn.tailwindcss.com">
+  </script>
+
+<script>
+
+  // Function to calculate hours between two times
+  function calculateTotalHours(startTimeStr, endTimeStr) {
+    // Parse the time strings
+    const [startHour, startMinute, startPeriod] = startTimeStr.split(/[:\s]/);
+    const [endHour, endMinute, endPeriod] = endTimeStr.split(/[:\s]/);
+    
+    // Convert to 24-hour format
+    let start = parseInt(startHour) + (parseInt(startMinute) / 60);
+    let end = parseInt(endHour) + (parseInt(endMinute) / 60);
+    
+    // Adjust for AM/PM
+    if (startPeriod === 'PM' && parseInt(startHour) !== 12) start += 12;
+    if (startPeriod === 'AM' && parseInt(startHour) === 12) start = parseInt(startMinute) / 60;
+    
+    if (endPeriod === 'PM' && parseInt(endHour) !== 12) end += 12;
+    if (endPeriod === 'AM' && parseInt(endHour) === 12) end = parseInt(endMinute) / 60;
+    
+    // Handle overnight shifts
+    if (end < start) end += 24;
+    
+    return end - start;
+  }
+
+  // Update total hours when time inputs change
+  function updateTotalHours() {
+    const startHour = document.querySelector('.start-hour').value.padStart(2, '0');
+    const startMinute = document.querySelector('.start-minute').value.padStart(2, '0');
+    const startPeriod = document.querySelector('.start-period').value;
+    
+    const endHour = document.querySelector('.end-hour').value.padStart(2, '0');
+    const endMinute = document.querySelector('.end-minute').value.padStart(2, '0');
+    const endPeriod = document.querySelector('.end-period').value;
+    
+    const startTimeStr = `${startHour}:${startMinute} ${startPeriod}`;
+    const endTimeStr = `${endHour}:${endMinute} ${endPeriod}`;
+    
+    const totalHours = calculateTotalHours(startTimeStr, endTimeStr);
+    
+    // Update displayed total
+    document.querySelector('.daily-total').textContent = totalHours.toFixed(2);
+    document.querySelector('.weekly-total').textContent = totalHours.toFixed(2);
+    
+    // Update hidden input for form submission
+    document.getElementById('totalHoursInput').value = totalHours.toFixed(2);
+  }
+  
+  // Initialize when the page loads
+  document.addEventListener('DOMContentLoaded', function() {
+    // Add event listeners to all time inputs
+    const timeInputs = document.querySelectorAll('.start-hour, .start-minute, .start-period, .end-hour, .end-minute, .end-period');
+    
+    timeInputs.forEach(input => {
+      input.addEventListener('input', function() {
+        // Validate input
+        if (this.type === 'number') {
+          let min = parseInt(this.min) || 0;
+          let max = parseInt(this.max) || (this.classList.contains('start-hour') || this.classList.contains('end-hour') ? 12 : 59);
+          let value = parseInt(this.value) || min;
+
+          if (value < min) value = min;
+          if (value > max) value = max;
+
+          this.value = value.toString().padStart(2, '0');
+        }
+        
+        // Update total
+        updateTotalHours();
+      });
+      
+      input.addEventListener('change', function() {
+        updateTotalHours();
+      });
+    });
+    
+    // Set default values
+    document.querySelector('.start-hour').value = '08';
+    document.querySelector('.start-minute').value = '00';
+    document.querySelector('.start-period').value = 'AM';
+    
+    document.querySelector('.end-hour').value = '05';
+    document.querySelector('.end-minute').value = '00';
+    document.querySelector('.end-period').value = 'PM';
+    
+    // Initial calculation
+    updateTotalHours();
+
+    // Add event listener for the "Add Another Name" button
+    const addNameBtn = document.getElementById('addNameBtn');
+    const additionalNamesContainer = document.getElementById('additionalNames');
+    
+    if (addNameBtn && additionalNamesContainer) {
+      addNameBtn.addEventListener('click', function() {
+        const nameEntry = document.createElement('div');
+        nameEntry.className = 'grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 border-t pt-4';
+        nameEntry.innerHTML = `
+          <div>
+            <label class="block text-gray-700">LAST NAME:</label>
+            <input name="additionalLastName[]" class="w-full border border-gray-300 p-2 rounded" type="text"/>
+          </div>
+          <div>
+            <label class="block text-gray-700">FIRST NAME:</label>
+            <input name="additionalFirstName[]" class="w-full border border-gray-300 p-2 rounded" type="text"/>
+          </div>
+          <div>
+            <label class="block text-gray-700">DEPARTMENT:</label>
+            <select name="additionalDepartment[]" class="w-full border border-gray-300 p-2 rounded">
+              <option>Select Department</option>
+              <option>RND</option>
+              <option>Operation</option>
+              <option>Technical</option>
+              <option>Inventory</option>
+              <option>Sales and Marketing</option>
+              <option>Human Resource</option>
+              <option>IT</option>
+              <option>Administrative</option>
+              <option>Accounting</option>
+              <option>Procurement</option>
+              <option>QC/QA</option>
+            </select>
+          </div>
+          <div class="flex items-end">
+            <button type="button" class="remove-name bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+              Remove
+            </button>
+          </div>
+        `;
+
+        // Add remove button functionality
+        const removeBtn = nameEntry.querySelector('.remove-name');
+        removeBtn.addEventListener('click', function() {
+          nameEntry.remove();
+        });
+
+        additionalNamesContainer.appendChild(nameEntry);
+      });
+    }
+  });
+  </script>
+ </head>
+ 
+ <body class="bg-gray-100 flex items-center justify-center min-h-screen">
+  <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl">
+   <div class="flex justify-between items-center mb-4">
+    <div class="flex space-x-2">
+     <button class="bg-green-500 text-white px-4 py-2 rounded">
+      OVERTIME
+     </button>
+     <button class="bg-gray-300 text-black px-4 py-2 rounded">
+      LEAVE
+     </button>
+    </div>
+    <div class="text-right">
+     <img alt="APPC Logo" class="h-12" height="50" src="./APPCLOGOV2Draft.png" width="100"/>
+    </div>
+   </div>
+   <h2 class="text-2xl font-bold text-green-600 mb-4">
+    OVERTIME RECORDING
+   </h2>
+   <form>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+     <div>
+      <label class="block text-gray-700">
+       LAST NAME:
+      </label>
+      <input name="lastName" class="w-full border border-gray-300 p-2 rounded" type="text"/>
+     </div>
+     <div>
+      <label class="block text-gray-700">
+       DATE FILED:
+      </label>
+      <input class="w-full border border-gray-300 p-2 rounded" type="date"/>
+     </div>
+     <div>
+      <label class="block text-gray-700">
+       FIRST NAME:
+      </label>
+      <input name="firstName" class="w-full border border-gray-300 p-2 rounded" type="text"/>
+     </div>
+     <div>
+      <label class="block text-gray-700">
+       SCHEDULE:
+      </label>
+      <select name="schedule" class="w-full border border-gray-300 p-2 rounded">
+        <option>
+        Morning Shift
+        </option>
+        <option>
+         Evening Shift
+        </option>
+       </select>
+     </div>
+     <div>
+      <label class="block text-gray-700">
+       DEPARTMENT:
+      </label>
+      <select name="department" class="w-full border border-gray-300 p-2 rounded">
+        <option>
+         Select Department
+        </option>
+        <option>
+          RND
+        </option>
+        <option>
+          Operation
+        </option>
+        <option>
+          Technical
+         </option>
+         <option>
+          Inventory
+         </option>
+         <option>
+          Sales and Marketing
+         </option>
+         <option>
+          Human Resource
+         </option>
+         <option>
+          IT
+         </option>
+         <option>
+          Administrative
+         </option>
+         <option>
+          Accounting
+         </option>
+         <option>
+          Procurement
+         </option>
+         <option>
+          QC/QA
+         </option>
+       </select>
+     </div>
+     <div>
+      <label class="block text-gray-700">
+       OT TYPE:
+      </label>
+      <select name="otType" class="w-full border border-gray-300 p-2 rounded">
+       <option>
+        Regular OT
+       </option>
+       <option>
+        Sunday OT
+       </option>
+       <option>
+        Holiday OT
+       </option>
+      </select>
+     </div>
+    </div>
+
+    <div id="additionalNames" class="mb-4">
+      <!-- Additional name entries will be added here -->
+    </div>
+
+    <div class="flex justify-end mb-4">
+      <button type="button" id="addNameBtn" 
+              class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+        Add Another Name
+      </button>
+    </div>
+
+    <div class="mb-6">
+      <h3 class="text-lg font-semibold mb-3">Time Entry</h3>
+      <div class="overflow-x-auto">
+        <table class="w-full border-collapse bg-white shadow-sm rounded-lg">
+          <thead>
+            <tr class="bg-gray-50">
+              <th class="border p-3 text-left">Start Time</th>
+              <th class="border p-3 text-left">End Time</th>
+              <th class="border p-3 text-left">Total Hours</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="border p-3">
+                <div class="flex items-center space-x-2">
+                  <input type="number" min="1" max="12" value="08" 
+                         name="startHour"
+                         class="start-hour border border-gray-300 rounded p-2 w-16 text-center"
+                         placeholder="HH">
+                  <span class="text-gray-500">:</span>
+                  <input type="number" min="0" max="59" value="00" 
+                         name="startMinute"
+                         class="start-minute border border-gray-300 rounded p-2 w-16 text-center"
+                         placeholder="MM">
+                  <select name="startPeriod" class="start-period border border-gray-300 rounded p-2 w-20">
+                    <option value="AM" selected>AM</option>
+                    <option value="PM">PM</option>
+                  </select>
+                </div>
+              </td>
+              <td class="border p-3">
+                <div class="flex items-center space-x-2">
+                  <input type="number" min="1" max="12" value="05" 
+                         name="endHour"
+                         class="end-hour border border-gray-300 rounded p-2 w-16 text-center"
+                         placeholder="HH">
+                  <span class="text-gray-500">:</span>
+                  <input type="number" min="0" max="59" value="00" 
+                         name="endMinute"
+                         class="end-minute border border-gray-300 rounded p-2 w-16 text-center"
+                         placeholder="MM">
+                  <select name="endPeriod" class="end-period border border-gray-300 rounded p-2 w-20">
+                    <option value="AM">AM</option>
+                    <option value="PM" selected>PM</option>
+                  </select>
+                </div>
+              </td>
+              <td class="border p-3">
+                <div class="daily-total text-right font-semibold">9.00</div>
+                <input type="hidden" id="totalHoursInput" name="totalHours" value="9.00">
+              </td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="bg-gray-50">
+              <td colspan="2" class="border p-3 text-right font-semibold">Total Hours:</td>
+              <td class="border p-3">
+                <div class="weekly-total text-right font-semibold">9.00</div>
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 mb-6">
+      <div>
+        <label class="block text-gray-700 font-semibold mb-2">
+          REASON FOR OT:
+        </label>
+        <input name="reason" required
+               class="w-full border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" 
+               type="text"
+               placeholder="Enter reason for overtime"/>
+      </div>
+
+      <div>
+        
+    </div>
+
+    <div class="flex justify-center space-x-4">
+      <button type="submit" 
+              class="bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+        SUBMIT
+      </button>
+      <button type="reset" 
+              class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-8 py-3 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2">
+        CLEAR
+      </button>
+    </div>
+   </form>
+  </div>
+ </body>
+
+
+ <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js"></script>
+  <script type="module">
+   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
+   import { getDatabase, ref, push, get, set } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-database.js";
+
+   // Initialize Firebase
+   const firebaseConfig = {
+     apiKey: "AIzaSyDzNOjp4SXZSL5z6A35pxNU34Ts67pGlwM",
+     authDomain: "logintesting-64bd1.firebaseapp.com",
+     databaseURL: "https://logintesting-64bd1-default-rtdb.firebaseio.com",
+     projectId: "logintesting-64bd1",
+     storageBucket: "logintesting-64bd1.appspot.com",
+     messagingSenderId: "1065274423800",
+     appId: "1:1065274423800:web:d2e62d59aa94032546be0d"
+   };
+
+   const app = initializeApp(firebaseConfig);
+   const database = getDatabase(app);
+
+   // Add event listener when DOM is loaded
+   document.addEventListener('DOMContentLoaded', function() {
+     // Connect the form submission to the submitOTRecord function
+     const form = document.querySelector('form');
+     if (form) {
+       form.addEventListener('submit', submitOTRecord);
+     }
+
+     // Add event listener to the LEAVE button
+     const leaveButton = document.querySelector('button.bg-gray-300');
+     if (leaveButton) {
+       leaveButton.addEventListener('click', function() {
+         window.location.href = 'appforleave.html';
+       });
+     }
+
+     // Add event listener to reset button to reset totalHours calculation after form reset
+     const resetButton = document.querySelector('button[type="reset"]');
+     if (resetButton) {
+       resetButton.addEventListener('click', function() {
+         // Use setTimeout to ensure the form is reset before recalculating
+         setTimeout(function() {
+           // Reset to default values
+           document.querySelector('.start-hour').value = '08';
+           document.querySelector('.start-minute').value = '00';
+           document.querySelector('.start-period').value = 'AM';
+           
+           document.querySelector('.end-hour').value = '05';
+           document.querySelector('.end-minute').value = '00';
+           document.querySelector('.end-period').value = 'PM';
+           
+           // Recalculate hours
+           updateTotalHours();
+         }, 10);
+       });
+     }
+   });
+
+   // Generate a unique OT number
+   async function generateOTNumber() {
+     const today = new Date();
+     const dateStr = today.toISOString().split('T')[0].replace(/-/g, '');
+     
+     const snapshot = await get(ref(database, 'otRecords'));
+     let sequence = 1;
+     
+     if (snapshot.exists()) {
+       const records = Object.values(snapshot.val());
+       const todayRecords = records.filter(record => 
+         record.employeeNo && record.employeeNo.startsWith(`OT-${dateStr}`)
+       );
+       if (todayRecords.length > 0) {
+         const lastSequence = Math.max(...todayRecords.map(record => 
+           parseInt(record.employeeNo.split('-')[2] || '0')
+         ));
+         sequence = lastSequence + 1;
+       }
+     }
+     
+     return `OT-${dateStr}-${String(sequence).padStart(3, '0')}`;
+}
+
+   async function submitOTRecord(event) {
+     event.preventDefault();
+     
+    // Show loading state
+     const submitButton = event.target.querySelector('button[type="submit"]');
+     submitButton.disabled = true;
+     submitButton.textContent = 'Submitting...';
+
+     try {
+      // Get common values that will be shared across all entries
+      const date = document.querySelector('input[type="date"]')?.value || '';
+      const schedule = document.querySelector('select[name="schedule"]')?.value.trim() || 'Morning Shift';
+      const otType = document.querySelector('select[name="otType"]')?.value || 'Regular OT';
+      const reason = document.querySelector('input[name="reason"]')?.value.trim() || '';
+      
+      // Get time values
+      const startHour = document.querySelector('input[name="startHour"]').value.padStart(2, '0');
+      const startMinute = document.querySelector('input[name="startMinute"]').value.padStart(2, '0');
+      const startPeriod = document.querySelector('select[name="startPeriod"]').value;
+      const endHour = document.querySelector('input[name="endHour"]').value.padStart(2, '0');
+      const endMinute = document.querySelector('input[name="endMinute"]').value.padStart(2, '0');
+      const endPeriod = document.querySelector('select[name="endPeriod"]').value;
+      
+      const startTime = `${startHour}:${startMinute} ${startPeriod}`;
+      const endTime = `${endHour}:${endMinute} ${endPeriod}`;
+      const totalHours = parseFloat(document.getElementById('totalHoursInput').value);
+
+      // Get main entry
+      const mainFirstName = document.querySelector('input[name="firstName"]').value.trim();
+      const mainLastName = document.querySelector('input[name="lastName"]').value.trim();
+      const mainDepartment = document.querySelector('select[name="department"]')?.value.trim() || '';
+
+      // Create array of entries to process
+      const entries = [
+        {
+          firstName: mainFirstName,
+          lastName: mainLastName,
+          department: mainDepartment
+        }
+      ];
+
+      // Add additional entries
+      const additionalFirstNames = document.querySelectorAll('input[name="additionalFirstName[]"]');
+      const additionalLastNames = document.querySelectorAll('input[name="additionalLastName[]"]');
+      const additionalDepartments = document.querySelectorAll('select[name="additionalDepartment[]"]');
+
+      for (let i = 0; i < additionalFirstNames.length; i++) {
+        const firstName = additionalFirstNames[i]?.value.trim() || '';
+        const lastName = additionalLastNames[i]?.value.trim() || '';
+        const department = additionalDepartments[i]?.value.trim() || '';
+
+        if (firstName && lastName && department) {
+          entries.push({
+            firstName,
+            lastName,
+            department
+          });
+        }
+      }
+
+      // Validate all entries
+      for (const entry of entries) {
+        if (!entry.firstName || !entry.lastName || !entry.department) {
+          throw new Error('Please fill in all required fields for all entries');
+        }
+      }
+
+      // Submit each entry individually
+      for (const entry of entries) {
+        const formData = {
+          employeeNo: await generateOTNumber(),
+          employeeName: `${entry.firstName} ${entry.lastName}`,
+          department: entry.department,
+          date: date,
+          schedule: schedule,
+          otType: otType,
+          reason: reason,
+          otStart: startTime,
+          otEnd: endTime,
+          totalHours: totalHours,
+          status: 'Pending',
+          timestamp: new Date().toISOString()
+        };
+
+        // Submit to Firebase
+        const newRecordRef = await push(ref(database, 'otRecords'), formData);
+        
+        // Create notification for admin dashboard
+        await createNotification(formData, newRecordRef.key);
+      }
+
+      // Display success message and redirect
+      alert('Overtime records submitted successfully!');
+      window.location.href = 'data.html';
+    } catch (error) {
+      console.error('Error:', error);
+      alert(error.message);
+    } finally {
+      submitButton.disabled = false;
+      submitButton.textContent = 'Submit';
+    }
+  }
+
+  // Function to generate a unique notification number
+  async function generateNotificationNumber() {
+    const today = new Date();
+    const dateStr = today.toISOString().split('T')[0].replace(/-/g, '');
+    
+    const snapshot = await get(ref(database, 'MTnotify'));
+    let sequence = 1;
+    
+    if (snapshot.exists()) {
+      const notifications = Object.values(snapshot.val());
+      const todayNotifications = notifications.filter(notification => 
+        notification.notificationNo && notification.notificationNo.startsWith(`NOTIFY-${dateStr}`)
+      );
+      
+      if (todayNotifications.length > 0) {
+        const lastSequence = Math.max(...todayNotifications.map(notification => 
+          parseInt(notification.notificationNo.split('-')[2] || '0')
+        ));
+        sequence = lastSequence + 1;
+      }
+    }
+    
+    return `NOTIFY-${dateStr}-${String(sequence).padStart(3, '0')}`;
+  }
+
+  // Function to create notification in MTnotify database
+  async function createNotification(formData, recordId) {
+    try {
+      const notificationData = {
+        notificationNo: await generateNotificationNumber(),
+        type: 'overtime_request',
+        title: 'New Overtime Request',
+        message: `${formData.employeeName} from ${formData.department} submitted an overtime request for ${formData.totalHours} hours on ${formData.date}. Reason: ${formData.reason}`,
+        status: 'unread',
+        read: false,
+        recordId: recordId,
+        employeeName: formData.employeeName,
+        department: formData.department,
+        otType: formData.otType,
+        date: formData.date,
+        totalHours: formData.totalHours,
+        timestamp: new Date().toISOString(),
+        targetUsers: ['admin', 'manager'] // User roles who should see this notification
+      };
+      
+      // Add notification to MTnotify database
+      await push(ref(database, 'MTnotify'), notificationData);
+      console.log("Notification created successfully");
+      
+    } catch (error) {
+      console.error("Error creating notification:", error);
+      // Continue even if notification fails - don't block the main workflow
+    }
+  }
+</script>
+
+
+
+<script>
+  // Check for notification when page loads
+  document.addEventListener('DOMContentLoaded', function() {
+    // Check if there's a notification to display
+    const notification = sessionStorage.getItem('otNotification');
+    if (notification) {
+      // Display the notification
+      const notificationContainer = document.getElementById('notificationContainer');
+      const notificationText = document.getElementById('notificationText');
+      
+      // Set the notification text
+      notificationText.innerText = notification;
+      
+      // Show the notification
+      notificationContainer.classList.remove('hidden');
+      
+      // Clear the notification from session storage
+      sessionStorage.removeItem('otNotification');
+      
+      // Auto-hide notification after 10 seconds
+      setTimeout(function() {
+        notificationContainer.classList.add('hidden');
+      }, 10000);
+      
+      // Add close button functionality
+      document.getElementById('closeNotification').addEventListener('click', function() {
+        notificationContainer.classList.add('hidden');
+      });
+    }
+  });
+</script>
+   
+</html>

@@ -1,0 +1,1899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <!-- Chart.js for pie chart -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #4a6cf7;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --background-color: #f8f9fa;
+            --card-bg-color: #ffffff;
+            --text-color: #333;
+            --header-color: #212529;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --border-radius: 10px;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .welcome-message {
+            color: var(--header-color);
+            font-size: 1.5rem;
+            font-weight: 500;
+            margin: 0;
+            text-align: center;
+            flex-grow: 1;
+        }
+        
+        .welcome-message span {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 0;
+            margin: 0;
+            min-height: 100vh;
+        }
+        
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .dashboard-header {
+            background-color: var(--card-bg-color);
+            padding: 20px 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .dashboard-header h1 {
+            color: var(--header-color);
+            font-size: 2rem;
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .chart-container {
+            background-color: var(--card-bg-color);
+            padding: 25px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            height: 450px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .chart-container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .chart-container h2 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            font-weight: 500;
+            text-align: center;
+        }
+        
+        .chart-wrapper {
+            height: 350px;
+            position: relative;
+        }
+        
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .dashboard-header {
+                padding: 15px;
+                text-align: center;
+                justify-content: center;
+            }
+            
+            .dashboard-header h1 {
+                margin-bottom: 10px;
+                font-size: 1.8rem;
+            }
+            
+            .chart-container {
+                height: 400px;
+                padding: 15px;
+            }
+            
+            .chart-wrapper {
+                height: 300px;
+            }
+        }
+        
+        @media (max-width: 500px) {
+            .dashboard-container {
+                padding: 10px;
+            }
+            
+            .chart-container h2 {
+                font-size: 1.3rem;
+            }
+        }
+        
+        /* Loading indicator */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        
+        .loading span {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            margin: 0 5px;
+            animation: loading 1.4s infinite ease-in-out both;
+        }
+        
+        .loading span:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+        
+        .loading span:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+        
+        @keyframes loading {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+        
+        /* No data message styling */
+        .no-data {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--secondary-color);
+        }
+        
+        /* Additional styles for notification section */
+        .notification-section {
+            background-color: var(--card-bg-color);
+            padding: 25px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+        }
+        
+        .notification-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .notification-header h2 {
+            color: var(--primary-color);
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 500;
+        }
+        
+        .notification-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 8px 15px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #3a57d0;
+        }
+        
+        .btn-secondary {
+            background-color: #e9ecef;
+            color: #495057;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #dde2e6;
+        }
+        
+        .notification-container {
+            position: relative;
+            min-height: 100px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .notification-item {
+            padding: 15px;
+            border-left: 4px solid #eee;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            background-color: #fcfcfc;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        
+        .notification-item:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .notification-unread {
+            border-left-color: var(--primary-color);
+            background-color: #f0f4ff;
+        }
+        
+        .notification-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--header-color);
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .notification-time {
+            font-size: 0.8rem;
+            color: var(--secondary-color);
+        }
+        
+        .notification-content {
+            font-size: 0.95rem;
+            white-space: pre-line;
+        }
+        
+        .notification-actions-item {
+            margin-top: 10px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        .notification-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            font-size: 0.8rem;
+            border-radius: 12px;
+            background-color: #e9ecef;
+            margin-right: 5px;
+        }
+        
+        .badge-overtime {
+            background-color: #cce5ff;
+            color: #004085;
+        }
+        
+        @media (max-width: 768px) {
+            .notification-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .notification-actions {
+                margin-top: 10px;
+            }
+        }
+        
+        .notification-meta {
+            font-size: 0.85rem;
+            color: var(--secondary-color);
+            margin-bottom: 8px;
+        }
+        
+        .notification-number {
+            font-family: monospace;
+            font-weight: 600;
+        }
+        
+        .notification-separator {
+            margin: 0 5px;
+        }
+        
+        .notification-department {
+            font-style: italic;
+        }
+        
+        .badge-leave {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 0.8rem;
+        }
+        
+        /* Add a subtle animation for new notifications */
+        @keyframes highlight-notification {
+            0% { background-color: rgba(74, 108, 247, 0.1); }
+            100% { background-color: transparent; }
+        }
+        
+        .notification-unread {
+            animation: highlight-notification 2s ease-out;
+        }
+
+        /* Navigation Bar Styles */
+        .navbar {
+            display: block; /* Changed from 'none' to make it visible by default */
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 250px;
+            background-color: var(--card-bg-color);
+            box-shadow: var(--shadow);
+            z-index: 1000;
+            transition: transform 0.3s ease;
+            padding: 20px 0; /* Reduced vertical padding */
+            transform: translateX(-100%); /* Hide it off-screen initially */
+        }
+
+        .navbar.active {
+            transform: translateX(0); /* Show it when active */
+        }
+
+        .navbar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .navbar li {
+            margin: 5px 0; /* Add some spacing between menu items */
+        }
+
+        .navbar a {
+            display: flex;
+            align-items: center;
+            padding: 12px 25px;
+            color: var(--text-color);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .navbar a svg {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+        }
+
+        .navbar a:hover {
+            background-color: rgba(74, 108, 247, 0.1);
+            color: var(--primary-color);
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .navbar a.active {
+            background-color: rgba(74, 108, 247, 0.1);
+            color: var(--primary-color);
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .navbar .logout-link {
+            color: #dc3545;
+            margin-top: 20px;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+
+        .navbar .logout-link:hover {
+            background-color: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+            border-left: 3px solid #dc3545;
+        }
+
+        .toggle-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1001;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow);
+            transition: all 0.2s ease;
+        }
+
+        .toggle-btn:hover {
+            transform: scale(1.1);
+            background-color: #3a57d0;
+        }
+
+        .toggle-btn img {
+            width: 20px;
+            height: 20px;
+            filter: brightness(0) invert(1); /* Make icon white */
+        }
+
+        /* Add navbar header and logo section */
+        .navbar-header {
+            padding: 0 25px 20px 25px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+        }
+
+        .navbar-logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        /* Adjust setting item styling */
+        .setting-item {
+            padding: 15px 25px;
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            border-top: 1px solid #eee;
+        }
+
+        .settings-btn {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            width: 100%;
+            text-align: left;
+        }
+
+        .settings-btn:hover {
+            color: var(--primary-color);
+        }
+
+        .settings-btn i {
+            margin-right: 10px;
+        }
+
+        /* Adjust main content when navbar is active */
+        .dashboard-container {
+            transition: margin-left 0.3s ease;
+        }
+
+        .dashboard-container.shifted {
+            margin-left: 250px;
+        }
+
+        @media (max-width: 768px) {
+            .navbar {
+                width: 100%;
+                transform: translateX(-100%);
+            }
+
+            .navbar.active {
+                transform: translateX(0);
+            }
+
+            .dashboard-container.shifted {
+                margin-left: 0;
+            }
+        }
+
+        /* New data summary container styles */
+        .data-summary-container {
+            background-color: var(--card-bg-color);
+            padding: 25px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+        }
+        
+        .data-summary-header {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .data-summary-header h2 {
+            color: var(--primary-color);
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 500;
+            text-align: center;
+        }
+        
+        .data-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .data-summary-section {
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .data-summary-section h3 {
+            font-size: 1.2rem;
+            color: var(--header-color);
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+            text-align: center;
+        }
+        
+        .data-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px dashed #eee;
+        }
+        
+        .data-item:last-child {
+            border-bottom: none;
+        }
+        
+        .data-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .data-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+        
+        .data-value {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        
+        .data-total {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 2px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            font-weight: 700;
+            color: var(--header-color);
+        }
+        
+        @media (max-width: 768px) {
+            .data-summary-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Record Popup Styles */
+        .record-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1100;
+            padding: 20px;
+        }
+        
+        .record-popup-content {
+            background-color: white;
+            border-radius: var(--border-radius);
+            width: 90%;
+            max-width: 700px;
+            max-height: 90vh;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .record-popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .record-popup-header h3 {
+            margin: 0;
+            color: var(--primary-color);
+            font-size: 1.3rem;
+        }
+        
+        .close-popup {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--secondary-color);
+        }
+        
+        .close-popup:hover {
+            color: var(--header-color);
+        }
+        
+        .record-popup-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        
+        .record-section {
+            margin-bottom: 25px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+        }
+        
+        .record-section:last-child {
+            border-bottom: none;
+            margin-bottom: 10px;
+        }
+        
+        .record-section h4 {
+            color: var(--header-color);
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        
+        .data-row {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        
+        .data-label {
+            width: 120px;
+            font-weight: 500;
+            color: var(--secondary-color);
+            flex-shrink: 0;
+        }
+        
+        .data-value {
+            flex: 1;
+        }
+        
+        .message-content {
+            white-space: pre-line;
+        }
+        
+        .record-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .approve-btn {
+            background-color: var(--success-color);
+        }
+        
+        .approve-btn:hover {
+            background-color: #218838;
+        }
+        
+        .reject-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .reject-btn:hover {
+            background-color: #c82333;
+        }
+        
+        .error-message {
+            color: #dc3545;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        @media (max-width: 576px) {
+            .data-row {
+                flex-direction: column;
+            }
+            
+            .data-label {
+                width: 100%;
+                margin-bottom: 3px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <button class="toggle-btn" onclick="toggleNavbar()">
+        <img src="./navigation.png" alt="Menu" />
+    </button>
+    
+    <nav class="navbar" id="navbar">
+        <div class="navbar-header">
+            <div class="navbar-logo">HR System</div>
+        </div>
+        <ul>
+            <li>
+                <a href="#" class="active">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                    </svg>
+                    Dashboard
+                </a>
+            </li>
+            <li>
+                <a href="#" onclick="goToProfilePage()">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    </svg>
+                    Profile
+                </a>
+            </li>
+            <li>
+                <a href="otrecording.html">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                   Overtime Form
+                </a>
+            </li>
+            <li>
+                <a href="appforleave.html">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                 Leave Form
+                </a>
+            </li>
+            <li>
+                <a href="data.html">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                    For OT Data
+                </a>
+            </li>
+            <li>
+                <a href="dataforleave.html">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    For Leave Data
+                </a>
+            </li>
+        </ul>
+        <div class="setting-item">
+            <a href="#" onclick="window.location.href = './settings.html'" class="settings-btn">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="20" height="20" style="margin-right: 10px;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>  
+                General Settings
+            </a>
+        </div>
+        <div class="setting-item">
+            <a href="#" onclick="logout()" class="logout-link">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="20" height="20" style="margin-right: 10px;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                </svg>
+                Logout
+            </a>
+        </div>
+    </nav>
+  
+    <!-- Your page content goes here -->
+    <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl">
+      <!-- Your content -->
+    </div>
+<body>
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <h1>HR Dashboard</h1>
+            <div class="welcome-message">Hi, <span id="user-fullname">User</span></div>
+            <span id="last-updated"></span>
+        </div>
+        
+        <div class="charts-grid">
+            <div class="chart-container">
+                <h2>Department Statistics - Overtime Data</h2>
+                <div class="chart-wrapper">
+                    <canvas id="pieChart"></canvas>
+                    <div id="regular-loading" class="loading">
+                        <span></span><span></span><span></span>
+                    </div>
+                    <div id="regular-no-data" class="no-data" style="display:none;">
+                        <p>No data available</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <h2>Department Statistics - Leave Data</h2>
+                <div class="chart-wrapper">
+                    <canvas id="leaveChart"></canvas>
+                    <div id="leave-loading" class="loading">
+                        <span></span><span></span><span></span>
+                    </div>
+                    <div id="leave-no-data" class="no-data" style="display:none;">
+                        <p>No data available</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add new chart container for form statistics -->
+            <div class="chart-container">
+                <h2>Form Submission Statistics</h2>
+                <div class="chart-wrapper">
+                    <canvas id="statsChart"></canvas>
+                    <div id="stats-loading" class="loading">
+                        <span></span><span></span><span></span>
+                    </div>
+                    <div id="stats-no-data" class="no-data" style="display:none;">
+                        <p>No data available</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add this after the charts-grid div and before the notifications section -->
+        <div class="data-summary-container">
+            <div class="data-summary-header">
+                <h2>Data Summary</h2>
+            </div>
+            <div class="data-summary-grid">
+                <div class="data-summary-section" id="overtime-summary">
+                    <h3>Overtime Data</h3>
+                    <div id="overtime-data-items">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                    <div class="data-total">
+                        <span>Total:</span>
+                        <span id="overtime-total">0</span>
+                    </div>
+                </div>
+                
+                <div class="data-summary-section" id="leave-summary">
+                    <h3>Leave Data</h3>
+                    <div id="leave-data-items">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                    <div class="data-total">
+                        <span>Total:</span>
+                        <span id="leave-total">0</span>
+                    </div>
+                </div>
+                
+                <div class="data-summary-section" id="forms-summary">
+                    <h3>Forms Submitted</h3>
+                    <div id="forms-data-items">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                    <div class="data-total">
+                        <span>Total:</span>
+                        <span id="forms-total">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Add Notifications Section -->
+        <div class="notification-section">
+            <div class="notification-header">
+                <h2>Recent Notifications</h2>
+                <div class="notification-actions">
+                    <button id="refresh-notifications" class="btn btn-secondary">Refresh</button>
+                </div>
+            </div>
+            
+            <div class="notification-container">
+                <div id="notification-loading" class="loading">
+                    <span></span><span></span><span></span>
+                </div>
+                <div id="notification-no-data" class="no-data" style="display:none;">
+                    <p>No notifications available</p>
+                </div>
+                <div id="notifications-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+         window.onload = function() {
+        const userId = sessionStorage.getItem('userID');
+        if (!userId) {
+            alert('Please login first');
+            window.location.href = 'login.html';
+        }
+        const userData = JSON.parse(sessionStorage.getItem('userData') || '{}');
+        const userFullname = userData.fullname || 'User';
+        document.getElementById('user-fullname').textContent = userFullname;
+    }
+
+    
+
+    function toggleNavbar() {
+        const navbar = document.getElementById('navbar');
+        const container = document.querySelector('.dashboard-container');
+        navbar.classList.toggle('active');
+        container.classList.toggle('shifted');
+    }
+
+    // Add this function to highlight the active page in navbar
+    function setActivePage() {
+        // Get current page URL
+        const currentPage = window.location.pathname.split('/').pop();
+        
+        // Find all links in navbar
+        const navLinks = document.querySelectorAll('.navbar a');
+        
+        // Remove active class from all links
+        navLinks.forEach(link => {
+            link.classList.remove('active');
+        });
+        
+        // Add active class to current page link
+        navLinks.forEach(link => {
+            const linkHref = link.getAttribute('href');
+            if (linkHref === currentPage) {
+                link.classList.add('active');
+            }
+        });
+    }
+
+    function goToProfilePage() {
+      const userId = sessionStorage.getItem('userID');
+      if (userId) {
+        window.location.href = `profile.html?userId=${userId}`;
+      } else {
+        alert('Please login first');
+        window.location.href = 'login.html';
+      }
+    }
+
+    function logout() {
+      sessionStorage.removeItem('userID');
+      window.location.href = 'login.html';
+    }
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDzNOjp4SXZSL5z6A35pxNU34Ts67pGlwM",
+            authDomain: "logintesting-64bd1.firebaseapp.com",
+            databaseURL: "https://logintesting-64bd1-default-rtdb.firebaseio.com",
+            projectId: "logintesting-64bd1",
+            storageBucket: "logintesting-64bd1.appspot.com",
+            messagingSenderId: "1065274423800",
+            appId: "1:1065274423800:web:d2e62d59aa94032546be0d"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        const updateLastUpdated = () => {
+            const now = new Date();
+            document.getElementById('last-updated').textContent = `Last updated: ${now.toLocaleString()}`;
+        };
+       
+        const chartColors = [
+            'rgba(54, 162, 235, 0.8)',
+            'rgba(255, 99, 132, 0.8)',
+            'rgba(75, 192, 192, 0.8)',
+            'rgba(255, 159, 64, 0.8)',
+            'rgba(153, 102, 255, 0.8)',
+            'rgba(255, 206, 86, 0.8)',
+            'rgba(231, 233, 237, 0.8)',
+            'rgba(46, 204, 113, 0.8)',
+            'rgba(142, 68, 173, 0.8)',
+            'rgba(241, 196, 15, 0.8)',
+            'rgba(52, 152, 219, 0.8)',
+            'rgba(231, 76, 60, 0.8)'
+        ];
+        
+        const ctx = document.getElementById('pieChart').getContext('2d');
+        let pieChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: [],
+                datasets: [{
+                    data: [],
+                    backgroundColor: chartColors
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            boxWidth: 12
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((value / total) * 100);
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Initialize the leave data pie chart
+        const leaveCtx = document.getElementById('leaveChart').getContext('2d');
+        let leaveChart = new Chart(leaveCtx, {
+            type: 'pie',
+            data: {
+                labels: [],
+                datasets: [{
+                    data: [],
+                    backgroundColor: chartColors
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            boxWidth: 12
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((value / total) * 100);
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Add new chart initialization for the statistics chart
+        const statsCtx = document.getElementById('statsChart').getContext('2d');
+        let statsChart = new Chart(statsCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Overtime Forms', 'Leave Forms'],
+                datasets: [{
+                    label: 'Number of Forms',
+                    data: [0, 0],
+                    backgroundColor: [
+                        'rgba(54, 162, 235, 0.8)',
+                        'rgba(255, 99, 132, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 99, 132, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `Total: ${context.raw}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Function to process department data from a Firebase snapshot
+        function processDepartmentData(data) {
+            if (!data) return { labels: [], values: [], colors: [] };
+            
+            // Object to count department occurrences
+            const departmentCounts = {};
+            
+            // Count occurrences of each department
+            Object.values(data).forEach(entry => {
+                // Assuming each entry has a department field
+                const department = entry.department || 'Unknown';
+                
+                if (departmentCounts[department]) {
+                    departmentCounts[department]++;
+                } else {
+                    departmentCounts[department] = 1;
+                }
+            });
+            
+            // Prepare data for chart
+            const labels = Object.keys(departmentCounts);
+            const values = Object.values(departmentCounts);
+            
+            return { labels, values };
+        }
+        
+        // Function to fetch regular data and update chart
+        function fetchRegularData() {
+            const regularLoading = document.getElementById('regular-loading');
+            const regularNoData = document.getElementById('regular-no-data');
+            
+            // Assuming data from data.html is stored at 'otRecords' path
+            const dataRef = database.ref('otRecords');
+            
+            dataRef.on('value', (snapshot) => {
+                regularLoading.style.display = 'none';
+                
+                const data = snapshot.val();
+                if (!data) {
+                    console.error('No regular data found in Firebase');
+                    regularNoData.style.display = 'block';
+                    return;
+                }
+                
+                regularNoData.style.display = 'none';
+                const { labels, values } = processDepartmentData(data);
+                
+                if (labels.length === 0) {
+                    regularNoData.style.display = 'block';
+                    return;
+                }
+                
+                // Update the regular data chart
+                pieChart.data.labels = labels;
+                pieChart.data.datasets[0].data = values;
+                // Use subset of chartColors array that matches the data length
+                pieChart.data.datasets[0].backgroundColor = chartColors.slice(0, labels.length);
+                pieChart.update();
+                
+                // Update data summary
+                updateDataSummary();
+                
+                updateLastUpdated();
+            }, (error) => {
+                regularLoading.style.display = 'none';
+                regularNoData.style.display = 'block';
+                console.error('Error fetching regular data:', error);
+            });
+        }
+        
+        function fetchLeaveData() {
+            const leaveLoading = document.getElementById('leave-loading');
+            const leaveNoData = document.getElementById('leave-no-data');
+            
+            const leaveRef = database.ref('leaveRecords');
+            
+            leaveRef.on('value', (snapshot) => {
+                leaveLoading.style.display = 'none';
+                
+                const data = snapshot.val();
+                if (!data) {
+                    console.error('No leave data found in Firebase');
+                    leaveNoData.style.display = 'block';
+                    return;
+                }
+                
+                leaveNoData.style.display = 'none';
+                const { labels, values } = processDepartmentData(data);
+                
+                if (labels.length === 0) {
+                    leaveNoData.style.display = 'block';
+                    return;
+                }
+                
+                // Update the leave data chart
+                leaveChart.data.labels = labels;
+                leaveChart.data.datasets[0].data = values;
+                // Use subset of chartColors array that matches the data length
+                leaveChart.data.datasets[0].backgroundColor = chartColors.slice(0, labels.length);
+                leaveChart.update();
+                
+                // Update data summary
+                updateDataSummary();
+                
+                updateLastUpdated();
+            }, (error) => {
+                leaveLoading.style.display = 'none';
+                leaveNoData.style.display = 'block';
+                console.error('Error fetching leave data:', error);
+            });
+        }
+        
+        // Function to format date
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffSec = Math.floor(diffMs / 1000);
+            const diffMin = Math.floor(diffSec / 60);
+            const diffHour = Math.floor(diffMin / 60);
+            const diffDay = Math.floor(diffHour / 24);
+            
+            if (diffSec < 60) {
+                return 'Just now';
+            } else if (diffMin < 60) {
+                return `${diffMin} minute${diffMin === 1 ? '' : 's'} ago`;
+            } else if (diffHour < 24) {
+                return `${diffHour} hour${diffHour === 1 ? '' : 's'} ago`;
+            } else if (diffDay < 7) {
+                return `${diffDay} day${diffDay === 1 ? '' : 's'} ago`;
+            } else {
+                // For older notifications, show the full date
+                return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            }
+        }
+
+        // Function to fetch and display notifications
+        function fetchNotifications() {
+            const notificationLoading = document.getElementById('notification-loading');
+            const notificationNoData = document.getElementById('notification-no-data');
+            const notificationsList = document.getElementById('notifications-list');
+            
+            notificationLoading.style.display = 'block';
+            notificationNoData.style.display = 'none';
+            notificationsList.innerHTML = '';
+            
+            const notifyRef = database.ref('MTnotify');
+            
+            // Use once() instead of on() to prevent multiple listeners
+            notifyRef.orderByChild('timestamp').limitToLast(20).once('value')
+                .then((snapshot) => {
+                    notificationLoading.style.display = 'none';
+                    
+                    const data = snapshot.val();
+                    if (!data) {
+                        console.log('No notifications found in database');
+                        notificationNoData.style.display = 'block';
+                        return;
+                    }
+                    
+                    // Convert to array and sort by timestamp (newest first)
+                    const notifications = Object.entries(data).map(([firebaseId, notification]) => ({
+                        firebaseId,  // Keep original Firebase ID for reference
+                        ...notification
+                    })).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                    
+                    if (notifications.length === 0) {
+                        notificationNoData.style.display = 'block';
+                        return;
+                    }
+                    
+                    // Build the notification items HTML
+                    let notificationsHTML = '';
+                    
+                    notifications.forEach(notification => {
+                        const isUnread = notification.read === false || notification.status === 'unread';
+                        const timestamp = formatDate(notification.timestamp);
+                        
+                        // Determine the badge class based on notification type
+                        let badgeClass = '';
+                        let badgeText = 'Notification';
+                        
+                        if (notification.type === 'overtime_request') {
+                            badgeClass = 'badge-overtime';
+                            badgeText = 'Overtime Request';
+                        } else if (notification.type === 'leave_request') {
+                            badgeClass = 'badge-leave';
+                            badgeText = 'Leave Request';
+                        }
+                        
+                        // Extract the record ID for linking to the record
+                        const recordId = notification.recordId || '';
+                        
+                        // Use notificationNo as primary ID if available, otherwise use Firebase ID
+                        const displayId = notification.notificationNo || `ID: ${notification.firebaseId.substring(0, 8)}`;
+                        
+                        notificationsHTML += `
+                            <div class="notification-item ${isUnread ? 'notification-unread' : ''}" data-id="${notification.firebaseId}">
+                                <div class="notification-title">
+                                    <div>
+                                        <span class="notification-badge ${badgeClass}">${badgeText}</span>
+                                        ${notification.employeeName || 'Unknown User'}
+                                    </div>
+                                    <span class="notification-time">${timestamp}</span>
+                                </div>
+                                <div class="notification-meta">
+                                    <span class="notification-number">${displayId}</span>
+                                    <span class="notification-separator">•</span>
+                                    <span class="notification-department">${notification.department || 'No Department'}</span>
+                                </div>
+                                <div class="notification-content">
+                                    ${notification.message || 'No message content'}
+                                </div>
+                                <div class="notification-actions-item">
+                                    <button class="btn btn-primary btn-sm mark-read" data-id="${notification.firebaseId}" 
+                                            ${!isUnread ? 'style="display:none"' : ''}>
+                                        Mark as Read
+                                    </button>
+                                    ${recordId ? `<button class="btn btn-secondary btn-sm view-record" 
+                                            data-id="${recordId}" data-notification-id="${notification.firebaseId}">View Record</button>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    notificationsList.innerHTML = notificationsHTML;
+                    
+                    // Add event listeners to the mark as read buttons
+                    document.querySelectorAll('.mark-read').forEach(button => {
+                        button.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            const notificationId = this.getAttribute('data-id');
+                            markNotificationAsRead(notificationId);
+                        });
+                    });
+                    
+                    // Add event listeners to view record buttons
+                    document.querySelectorAll('.view-record').forEach(button => {
+                        button.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            const recordId = this.getAttribute('data-id');
+                            const notificationId = this.getAttribute('data-notification-id');
+                            viewRecordPopup(recordId, notificationId);
+                        });
+                    });
+                    
+                    updateLastUpdated();
+                })
+                .catch((error) => {
+                    notificationLoading.style.display = 'none';
+                    notificationNoData.style.display = 'block';
+                    console.error('Error fetching notifications:', error);
+                });
+        }
+        
+        // Function to mark notification as read
+        function markNotificationAsRead(notificationId) {
+            if (!notificationId) return;
+            
+            const notificationRef = database.ref(`MTnotify/${notificationId}`);
+            notificationRef.update({
+                read: true,
+                status: 'read'
+            }).then(() => {
+                console.log(`Notification ${notificationId} marked as read`);
+                // Update UI
+                const notificationItem = document.querySelector(`.notification-item[data-id="${notificationId}"]`);
+                if (notificationItem) {
+                    notificationItem.classList.remove('notification-unread');
+                    const markReadButton = notificationItem.querySelector('.mark-read');
+                    if (markReadButton) {
+                        markReadButton.style.display = 'none';
+                    }
+                }
+            }).catch(error => {
+                console.error('Error marking notification as read:', error);
+            });
+        }
+        
+        // Function to view the record
+        function viewRecordPopup(recordId, notificationId) {
+            if (!recordId) return;
+            
+            // Create popup container
+            const popup = document.createElement('div');
+            popup.className = 'record-popup';
+            popup.innerHTML = `
+                <div class="record-popup-content">
+                    <div class="record-popup-header">
+                        <h3>Record Details</h3>
+                        <button class="close-popup">&times;</button>
+                    </div>
+                    <div class="record-popup-body">
+                        <div class="loading">
+                            <span></span><span></span><span></span>
+                        </div>
+                        <div class="record-data"></div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(popup);
+            
+            // Add event listener to close button
+            popup.querySelector('.close-popup').addEventListener('click', () => {
+                document.body.removeChild(popup);
+            });
+            
+            // Add event listener to close when clicking outside
+            popup.addEventListener('click', (e) => {
+                if (e.target === popup) {
+                    document.body.removeChild(popup);
+                }
+            });
+            
+            // Fetch record data
+            const recordDataElement = popup.querySelector('.record-data');
+            const loadingElement = popup.querySelector('.loading');
+            
+            // First get notification details
+            if (notificationId) {
+                database.ref(`MTnotify/${notificationId}`).once('value')
+                    .then(snapshot => {
+                        const notificationData = snapshot.val();
+                        
+                        if (notificationData) {
+                            // Now fetch the related record data based on type
+                            let recordRef;
+            if (recordId.startsWith('OT-')) {
+                                recordRef = database.ref(`otRecords/${recordId}`);
+            } else if (recordId.startsWith('LEAVE-')) {
+                                recordRef = database.ref(`leaveRecords/${recordId}`);
+            } else {
+                                // Default case
+                                recordRef = database.ref(`records/${recordId}`);
+                            }
+                            
+                            return recordRef.once('value').then(recordSnapshot => {
+                                return {
+                                    notification: notificationData,
+                                    record: recordSnapshot.val()
+                                };
+                            });
+                        }
+                        return { notification: notificationData };
+                    })
+                    .then(data => {
+                        loadingElement.style.display = 'none';
+                        
+                        if (!data.notification) {
+                            recordDataElement.innerHTML = '<p class="error-message">Notification data not found</p>';
+                            return;
+                        }
+                        
+                        // Build HTML for data display
+                        let html = `
+                            <div class="record-section">
+                                <h4>Notification Details</h4>
+                                <div class="data-row">
+                                    <div class="data-label">Notification ID:</div>
+                                    <div class="data-value">${data.notification.notificationNo || notificationId}</div>
+                                </div>
+                                <div class="data-row">
+                                    <div class="data-label">Type:</div>
+                                    <div class="data-value">${data.notification.type === 'overtime_request' ? 'Overtime Request' : 
+                                                     data.notification.type === 'leave_request' ? 'Leave Request' : 
+                                                     data.notification.type || 'Unknown'}</div>
+                                </div>
+                                <div class="data-row">
+                                    <div class="data-label">From:</div>
+                                    <div class="data-value">${data.notification.employeeName || 'Unknown'}</div>
+                                </div>
+                                <div class="data-row">
+                                    <div class="data-label">Department:</div>
+                                    <div class="data-value">${data.notification.department || 'Not specified'}</div>
+                                </div>
+                                <div class="data-row">
+                                    <div class="data-label">Date:</div>
+                                    <div class="data-value">${new Date(data.notification.timestamp).toLocaleString()}</div>
+                                </div>
+                                <div class="data-row">
+                                    <div class="data-label">Message:</div>
+                                    <div class="data-value message-content">${data.notification.message || 'No message'}</div>
+                                </div>
+                                <div class="data-row">
+                                    <div class="data-label">Status:</div>
+                                    <div class="data-value">${data.notification.status || 'Not specified'}</div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        // Add record details if available
+                        if (data.record) {
+                            html += `
+                                <div class="record-section">
+                                    <h4>Record Details</h4>
+                            `;
+                            
+                            // Display different fields based on record type
+                            if (recordId.startsWith('OT-')) {
+                                // Overtime specific fields
+                                html += `
+                                    <div class="data-row">
+                                        <div class="data-label">Record ID:</div>
+                                        <div class="data-value">${recordId}</div>
+                                    </div>
+                                    <div class="data-row">
+                                        <div class="data-label">Employee:</div>
+                                        <div class="data-value">${data.record.ename || data.record.employeeName || 'Not specified'}</div>
+                                    </div>
+                                    <div class="data-row">
+                                        <div class="data-label">Department:</div>
+                                        <div class="data-value">${data.record.department || 'Not specified'}</div>
+                                    </div>
+                                    <div class="data-row">
+                                        <div class="data-label">Date:</div>
+                                        <div class="data-value">${data.record.date || 'Not specified'}</div>
+                                    </div>
+                                    <div class="data-row">
+                                        <div class="data-label">Time:</div>
+                                        <div class="data-value">${data.record.time || 'Not specified'}</div>
+                                    </div>
+                                    <div class="data-row">
+                                        <div class="data-label">Hours:</div>
+                                        <div class="data-value">${data.record.hours || 'Not specified'}</div>
+                                    </div>
+                                    <div class="data-row">
+                                        <div class="data-label">Reason:</div>
+                                        <div class="data-value message-content">${data.record.reason || 'Not specified'}</div>
+                                    </div>
+                                    <div class="data-row">
+                                        <div class="data-label">Status:</div>
+                                        <div class="data-value">${data.record.status || 'Pending'}</div>
+                                    </div>
+                                `;
+                            } else if (recordId.startsWith('LEAVE-')) {
+                                // Leave specific fields
+                                html += `
+                                    <div class="data-row">
+                                        <div class="data-label">Record ID:</div>
+                                        <div class="data-value">${recordId}</div>
+                                    </div>
+                                    <div class="data-row">
+                                        <div class="data-label">Employee:</div>
+                                        <div class="data-value">${data.record.ename || data.record.employeeName || 'Not specified'}</div>
+                                    </div>
+                                    <div class="data-row">
+                                        <div class="data-label">Department:</div>
+                                        <div class="data-value">${data.record.department || 'Not specified'}</div>
+                                    </div>
+                                    <div class="data-row">
+                                        <div class="data-label">From:</div>
+                                        <div class="data-value">${data.record.fromDate || 'Not specified'}</div>
+                                    </div>
+                                    <div class="data-row">
+                                        <div class="data-label">To:</div>
+                                        <div class="data-value">${data.record.toDate || 'Not specified'}</div>
+                                    </div>
+                                    <div class="data-row">
+                                        <div class="data-label">Leave Type:</div>
+                                        <div class="data-value">${data.record.leaveType || 'Not specified'}</div>
+                                    </div>
+                                    <div class="data-row">
+                                        <div class="data-label">Reason:</div>
+                                        <div class="data-value message-content">${data.record.reason || 'Not specified'}</div>
+                                    </div>
+                                    <div class="data-row">
+                                        <div class="data-label">Status:</div>
+                                        <div class="data-value">${data.record.status || 'Pending'}</div>
+                                    </div>
+                                `;
+                            } else {
+                                // Generic record display - iterate through all properties
+                                Object.entries(data.record).forEach(([key, value]) => {
+                                    // Skip internal fields or too complex objects
+                                    if (key !== '_id' && typeof value !== 'object') {
+                                        html += `
+                                            <div class="data-row">
+                                                <div class="data-label">${key}:</div>
+                                                <div class="data-value">${value}</div>
+                                            </div>
+                                        `;
+                                    }
+                                });
+                            }
+                            
+                            html += `</div>`;
+                        }
+                        
+                        // Add action buttons at the bottom
+                        html += `
+                            <div class="record-actions">
+                                <button class="btn btn-primary approve-btn" data-id="${recordId}">Approve</button>
+                                <button class="btn btn-secondary reject-btn" data-id="${recordId}">Reject</button>
+                            </div>
+                        `;
+                        
+                        recordDataElement.innerHTML = html;
+                        
+                        // Add event listeners for approve/reject buttons
+                        recordDataElement.querySelector('.approve-btn').addEventListener('click', () => {
+                            updateRecordStatus(recordId, 'approved');
+                            document.body.removeChild(popup);
+                        });
+                        
+                        recordDataElement.querySelector('.reject-btn').addEventListener('click', () => {
+                            updateRecordStatus(recordId, 'rejected');
+                            document.body.removeChild(popup);
+                        });
+                    })
+                    .catch(error => {
+                        loadingElement.style.display = 'none';
+                        recordDataElement.innerHTML = `<p class="error-message">Error loading data: ${error.message}</p>`;
+                        console.error('Error fetching record data:', error);
+                    });
+            } else {
+                loadingElement.style.display = 'none';
+                recordDataElement.innerHTML = '<p class="error-message">No notification ID provided</p>';
+            }
+        }
+        
+        // Function to update record status (approve/reject)
+        function updateRecordStatus(recordId, status) {
+            if (!recordId) return;
+            
+            let recordRef;
+            if (recordId.startsWith('OT-')) {
+                recordRef = database.ref(`otRecords/${recordId}`);
+            } else if (recordId.startsWith('LEAVE-')) {
+                recordRef = database.ref(`leaveRecords/${recordId}`);
+            } else {
+                recordRef = database.ref(`records/${recordId}`);
+            }
+            
+            recordRef.update({
+                status: status
+            }).then(() => {
+                alert(`Record ${recordId} has been ${status}`);
+                // You may want to refresh notifications or update UI here
+                fetchNotifications();
+            }).catch(error => {
+                console.error(`Error updating record status: ${error.message}`);
+                alert(`Failed to update record status: ${error.message}`);
+            });
+        }
+        
+        // Function to update the statistics chart
+        function updateStatisticsChart() {
+            const statsLoading = document.getElementById('stats-loading');
+            const statsNoData = document.getElementById('stats-no-data');
+            
+            statsLoading.style.display = 'block';
+            statsNoData.style.display = 'none';
+            
+            // Get data counts from both sources
+            Promise.all([
+                // Get total count of overtime forms
+                database.ref('otRecords').once('value'),
+                // Get total count of leave forms
+                database.ref('leaveRecords').once('value')
+            ])
+            .then(([otSnapshot, leaveSnapshot]) => {
+                statsLoading.style.display = 'none';
+                
+                // Get count of records
+                const otCount = otSnapshot.exists() ? Object.keys(otSnapshot.val()).length : 0;
+                const leaveCount = leaveSnapshot.exists() ? Object.keys(leaveSnapshot.val()).length : 0;
+                
+                if (otCount === 0 && leaveCount === 0) {
+                    statsNoData.style.display = 'block';
+                    return;
+                }
+                
+                // Update chart with counts
+                statsChart.data.datasets[0].data = [otCount, leaveCount];
+                statsChart.update();
+                
+                // Update data summary
+                updateDataSummary();
+                
+                // Update total count in chart title
+                const totalForms = otCount + leaveCount;
+                const statsChartTitle = statsCtx.canvas.closest('.chart-container').querySelector('h2');
+                statsChartTitle.textContent = `Form Submission Statistics`;
+                
+                updateLastUpdated();
+            })
+            .catch(error => {
+                statsLoading.style.display = 'none';
+                statsNoData.style.display = 'block';
+                console.error('Error fetching statistics data:', error);
+            });
+        }
+        
+        // Event listeners for notification buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            // Refresh notifications button
+            const refreshButton = document.getElementById('refresh-notifications');
+            if (refreshButton) {
+                refreshButton.addEventListener('click', fetchNotifications);
+            }
+            
+            // Call functions to fetch data and update UI
+            fetchRegularData();
+            fetchLeaveData();
+            fetchNotifications();
+            updateStatisticsChart();
+            
+            // Set active page in navbar
+            setActivePage();
+        });
+        
+        // Update all charts when window is resized
+        window.addEventListener('resize', () => {
+            if (pieChart && typeof pieChart.resize === 'function') {
+                pieChart.resize();
+            }
+            if (leaveChart && typeof leaveChart.resize === 'function') {
+                leaveChart.resize();
+            }
+            if (statsChart && typeof statsChart.resize === 'function') {
+                statsChart.resize();
+            }
+        });
+
+        // Close navbar when clicking outside
+        document.addEventListener('click', function(event) {
+            const navbar = document.getElementById('navbar');
+            const toggleBtn = document.querySelector('.toggle-btn');
+            
+            if (navbar.classList.contains('active') && 
+                !navbar.contains(event.target) && 
+                !toggleBtn.contains(event.target)) {
+                navbar.classList.remove('active');
+                document.querySelector('.dashboard-container').classList.remove('shifted');
+            }
+        });
+
+        // Add this function to update the data summary container
+        function updateDataSummary() {
+            // Update overtime data summary
+            updateDataSection('overtime', pieChart);
+            
+            // Update leave data summary
+            updateDataSection('leave', leaveChart);
+            
+            // Update forms data summary
+            const formsData = statsChart.data.datasets[0].data;
+            const formsLabels = statsChart.data.labels;
+            const formsColors = ['rgba(54, 162, 235, 1)', 'rgba(255, 99, 132, 1)'];
+            
+            const formsContainer = document.getElementById('forms-data-items');
+            formsContainer.innerHTML = '';
+            
+            let formsTotal = 0;
+            
+            formsLabels.forEach((label, index) => {
+                const value = formsData[index] || 0;
+                formsTotal += value;
+                
+                const dataItem = document.createElement('div');
+                dataItem.className = 'data-item';
+                
+                const dataLabel = document.createElement('div');
+                dataLabel.className = 'data-label';
+                
+                const colorBox = document.createElement('span');
+                colorBox.className = 'data-color';
+                colorBox.style.backgroundColor = formsColors[index];
+                
+                dataLabel.appendChild(colorBox);
+                dataLabel.appendChild(document.createTextNode(label));
+                
+                const dataValue = document.createElement('div');
+                dataValue.className = 'data-value';
+                dataValue.textContent = value;
+                
+                dataItem.appendChild(dataLabel);
+                dataItem.appendChild(dataValue);
+                formsContainer.appendChild(dataItem);
+            });
+            
+            document.getElementById('forms-total').textContent = formsTotal;
+        }
+
+        // Helper function to update a data section based on chart data
+        function updateDataSection(sectionType, chart) {
+            const data = chart.data.datasets[0].data;
+            const labels = chart.data.labels;
+            const colors = chart.data.datasets[0].backgroundColor;
+            
+            const container = document.getElementById(`${sectionType}-data-items`);
+            container.innerHTML = '';
+            
+            let total = 0;
+            
+            labels.forEach((label, index) => {
+                const value = data[index] || 0;
+                total += value;
+                
+                const dataItem = document.createElement('div');
+                dataItem.className = 'data-item';
+                
+                const dataLabel = document.createElement('div');
+                dataLabel.className = 'data-label';
+                
+                const colorBox = document.createElement('span');
+                colorBox.className = 'data-color';
+                colorBox.style.backgroundColor = colors[index];
+                
+                dataLabel.appendChild(colorBox);
+                dataLabel.appendChild(document.createTextNode(label));
+                
+                const dataValue = document.createElement('div');
+                dataValue.className = 'data-value';
+                dataValue.textContent = value;
+                
+                dataItem.appendChild(dataLabel);
+                dataItem.appendChild(dataValue);
+                container.appendChild(dataItem);
+            });
+            
+            document.getElementById(`${sectionType}-total`).textContent = total;
+        }
+
+
+    </script>
+</body>
+</html>

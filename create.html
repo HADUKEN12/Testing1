@@ -1,0 +1,194 @@
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        margin: 0;
+        padding: 20px;
+    }
+    .container {
+        max-width: 600px;
+        margin: auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        position: relative; /* Adjusted for logo positioning */
+        text-align: left; /* Keep text aligned to the left */
+    }
+    h2 {
+        text-align: center;
+    }
+    label {
+        display: block;
+        margin: 10px 0 5px;
+    }
+    input[type="text"],
+    input[type="password"],
+    input[type="email"],
+    input[type="tel"] {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+    input[type="submit"] {
+        background-color: #5cb85c;
+        color: white;
+        padding: 8px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        width: 300px;
+        display: block; /* Make the button a block element */
+        margin: 20px auto; /* Center the button */
+    }
+    input[type="submit"]:hover {
+        background-color: #4cae4c;
+    }
+    .logo {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        max-width: 100px; /* Adjust logo size */
+    }
+    .back-button {
+        background-color: #007bff; /* Bootstrap primary color */
+        color: white;
+        padding: 10px 15px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-bottom: 20px;
+        text-align: center;
+        font-size: 16px;
+        transition: background-color 0.3s;
+    }
+    .back-button:hover {
+        background-color: #0056b3; /* Darker shade on hover */
+    }
+</style>
+<button class="back-button" onclick="window.location.href='login.html'">Back</button>
+<div class="container">
+    <form action="/submit" method="POST" onsubmit="saveUserData(event)">
+        <h2>Sign Up</h2>
+        <img src="./APPCLOGOV2Draft.png" alt="Logo" class="logo"> <!-- Logo on the right side -->
+        
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required><br>
+
+        <label for="password">Password:</label>
+        <div style="position: relative;">
+            <input type="password" id="password" name="password" required>
+            
+        </div><br>
+
+        <label for="repassword">Re-enter Password:</label>
+        <div style="position: relative;">
+            <input type="password" id="repassword" name="repassword" required>
+           
+        </div><br>
+
+        <label for="fullname">Full Name:</label>
+        <input type="text" id="fullname" name="fullname" required><br>
+
+        <label for="position">Position:</label>
+        <input type="text" id="position" name="position" required><br>
+
+        <label for="department">Department:</label>
+        <input type="text" id="department" name="department" required><br>
+
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" required><br>
+
+        <label for="contact">Contact Number:</label>
+        <input type="tel" id="contact" name="contact" required><br>
+
+        <input type="submit" value="Create Account">
+    </form>
+</div>
+
+<script>
+    // Move this function outside of the module scope to make it globally accessible
+    function togglePasswordVisibility(id, eyeIcon) {
+        const passwordInput = document.getElementById(id);
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            eyeIcon.src = 'C:/Users/ACER/Downloads/eye.png'; 
+        } else {
+            passwordInput.type = 'password';
+            eyeIcon.src = 'C:/Users/ACER/Downloads/hidden.png'; 
+        }
+    }
+</script>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-analytics.js";
+    import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-database.js";
+    
+    const firebaseConfig = {
+        apiKey: "AIzaSyDzNOjp4SXZSL5z6A35pxNU34Ts67pGlwM",
+        authDomain: "logintesting-64bd1.firebaseapp.com",
+        databaseURL: "https://logintesting-64bd1-default-rtdb.firebaseio.com",
+        projectId: "logintesting-64bd1",
+        storageBucket: "logintesting-64bd1.appspot.com",
+        messagingSenderId: "1065274423800",
+        appId: "1:1065274423800:web:d2e62d59aa94032546be0d"
+    };
+  
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const db = getDatabase(app);
+
+    // Function to generate a unique userID
+    function generateUserID() {
+        return 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    // Make saveUserData function available globally
+    window.saveUserData = async function(event) {
+        event.preventDefault();
+
+        const formData = new FormData(event.target);
+        const userData = Object.fromEntries(formData);
+
+        if (userData.password !== userData.repassword) {
+            alert("Passwords do not match!");
+            return;
+        }
+
+        try {
+            // Check if username already exists
+            const usersRef = ref(db, 'users');
+            const snapshot = await get(usersRef);
+            
+            let usernameExists = false;
+            if (snapshot.exists()) {
+                snapshot.forEach((childSnapshot) => {
+                    const existingUser = childSnapshot.val();
+                    if (existingUser.username === userData.username) {
+                        usernameExists = true;
+                    }
+                });
+            }
+
+            if (usernameExists) {
+                alert("Username already exists. Please choose a different username.");
+                return;
+            }
+
+            // Store user data directly with username as the key
+            const userRef = ref(db, 'users/' + userData.username);
+            delete userData.repassword; // Remove repassword field
+            
+            await set(userRef, userData);
+            console.log('User created successfully:', userData.username);
+            alert("Account created successfully!");
+            window.location.href = 'login.html';
+        } catch (error) {
+            console.error("Error creating account:", error);
+            alert("Error creating account. Please try again.");
+        }
+    }
+</script>

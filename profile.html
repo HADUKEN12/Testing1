@@ -1,0 +1,359 @@
+<style>
+    .profile-container {
+        max-width: 600px;
+        margin: 40px auto;
+        padding: 30px;
+        text-align: center;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border-radius: 12px;
+        background-color: rgb(61, 172, 38);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .image-upload-button {
+        position: relative;
+        display: inline-block;
+        cursor: pointer;
+        margin-bottom: 30px;
+    }
+
+    #profile-image {
+        width: 180px;
+        height: 180px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid #ffffff;
+        box-shadow: 0 2px 15px rgba(0, 0, 0, 0.15);
+        transition: all 0.3s ease;
+    }
+
+    .image-upload-button:hover #profile-image {
+        filter: brightness(85%);
+        transform: scale(1.02);
+    }
+
+    .image-upload-button:hover::after {
+        content: 'Change Photo';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-size: 16px;
+        font-weight: 600;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    #file-input {
+        display: none;
+    }
+
+    .profile-info {
+        text-align: left;
+        padding: 20px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .profile-info p {
+        margin: 0;
+        padding: 15px;
+        border-bottom: 1px solid #e9ecef;
+        font-size: 16px;
+        color: #495057;
+        display: flex;
+        align-items: center;
+    }
+
+    .profile-info p:last-child {
+        border-bottom: none;
+    }
+
+    .profile-info p::before {
+        margin-right: 10px;
+        font-weight: 600;
+        color: #6c757d;
+        min-width: 140px;
+    }
+
+    #fullname::before { content: "Full Name:"; }
+    #position::before { content: "Position:"; }
+    #department::before { content: "Department:"; }
+    #email::before { content: "Email:"; }
+    #contact::before { content: "Contact Number:"; }
+
+    @media (max-width: 600px) {
+        .profile-container {
+            margin: 20px;
+            padding: 20px;
+        }
+
+        .profile-info p {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .profile-info p::before {
+            margin-bottom: 5px;
+        }
+    }
+
+    .back-button {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        width: 40px;
+        height: 40px;
+        background-color: #f8f9fa;
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+    }
+
+    .back-button img {
+        width: 24px;
+        height: 24px;
+    }
+
+    .back-button:hover {
+        background-color: #e9ecef;
+        transform: translateX(-3px);
+    }
+
+    /* Add these new styles for the notification */
+    .notification {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background-color: #4CAF50;
+        color: white;
+        padding: 15px 25px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        transform: translateX(200%);
+        transition: transform 0.3s ease-in-out;
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .notification.show {
+        transform: translateX(0);
+    }
+
+    .notification.error {
+        background-color: #f44336;
+    }
+
+    .notification i {
+        font-size: 20px;
+    }
+</style>
+
+<div class="profile-container">
+    <button class="back-button" onclick="window.history.back()">
+        <img src="./arrow.png" alt="Back">
+    </button>
+    <label class="image-upload-button">
+        <input type="file" id="file-input" accept="image/*">
+        <img id="profile-image" src="C:/Users/ACER/Downloads/profileicon.jpg" alt="Profile Picture">
+    </label>
+    <div class="profile-info">
+        <p id="fullname"></p>
+        <p id="position"></p>
+        <p id="department"></p>
+        <p id="email"></p>
+        <p id="contact"></p>
+    </div>
+</div>
+
+<!-- Add this new notification element -->
+<div class="notification" id="notification">
+    <i class="fas fa-check-circle"></i>
+    <span id="notification-message"></span>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-analytics.js";
+    import { getDatabase, ref, get, update } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-database.js";
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-storage.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyDzNOjp4SXZSL5z6A35pxNU34Ts67pGlwM",
+        authDomain: "logintesting-64bd1.firebaseapp.com",
+        databaseURL: "https://logintesting-64bd1-default-rtdb.firebaseio.com",
+        projectId: "logintesting-64bd1",
+        storageBucket: "logintesting-64bd1.appspot.com",
+        messagingSenderId: "1065274423800",
+        appId: "1:1065274423800:web:d2e62d59aa94032546be0d"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const db = getDatabase(app);
+    const storage = getStorage(app);
+
+    // Update the DEFAULT_PROFILE_IMAGE constant
+    const DEFAULT_PROFILE_IMAGE = "C:/Users/ACER/Downloads/profileicon.jpg"; // Use your local default image for now
+
+    // Function to get URL parameters
+    function getUrlParameter(name) {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get(name);
+    }
+
+    // Debug function to check session storage
+    function checkSessionStorage() {
+        const userId = sessionStorage.getItem('userID');
+        const userData = JSON.parse(sessionStorage.getItem('userData') || '{}');
+        console.log('Session Storage Check:', {
+            userId: userId,
+            userData: userData
+        });
+        return userId != null;
+    }
+
+    // Updated loadUserData function
+    async function loadUserData() {
+        console.log('Loading user data...');
+        
+        if (!checkSessionStorage()) {
+            console.error('No user ID found in session');
+            window.location.href = 'login.html';
+            return;
+        }
+
+        const username = sessionStorage.getItem('userID');
+        console.log('Loading data for username:', username);
+
+        try {
+            // Get user data from database
+            const userRef = ref(db, 'users/' + username);
+            const snapshot = await get(userRef);
+            
+            if (snapshot.exists()) {
+                const userData = snapshot.val();
+                // Update session storage with latest data
+                sessionStorage.setItem('userData', JSON.stringify(userData));
+                
+                console.log('User data loaded:', userData);
+                
+                // Update profile fields
+                document.getElementById('fullname').textContent = userData.fullname || 'N/A';
+                document.getElementById('position').textContent = userData.position || 'N/A';
+                document.getElementById('department').textContent = userData.department || 'N/A';
+                document.getElementById('email').textContent = userData.email || 'N/A';
+                document.getElementById('contact').textContent = userData.contact || 'N/A';
+
+                // Load profile picture
+                const profileImage = document.getElementById('profile-image');
+                if (profileImage) {
+                    if (userData.profilePictureURL) {
+                        // Use the stored URL from Firebase
+                        profileImage.src = userData.profilePictureURL;
+                    } else {
+                        profileImage.src = DEFAULT_PROFILE_IMAGE;
+                    }
+                }
+            } else {
+                throw new Error('No data found for user');
+            }
+            
+        } catch (error) {
+            console.error('Error loading user data:', error);
+            alert('Error loading user profile. Please try logging in again.');
+            window.location.href = 'login.html';
+        }
+    }
+
+    // Add this new function for showing notifications
+    function showNotification(message, isError = false) {
+        const notification = document.getElementById('notification');
+        const messageElement = document.getElementById('notification-message');
+        
+        messageElement.textContent = message;
+        notification.classList.toggle('error', isError);
+        notification.classList.add('show');
+
+        // Hide notification after 3 seconds
+        setTimeout(() => {
+            notification.classList.remove('show');
+        }, 3000);
+    }
+
+    // Update the file input event listener to use the new notification
+    document.getElementById('file-input').addEventListener('change', async function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            if (!file.type.startsWith('image/')) {
+                showNotification('Please select an image file', true);
+                return;
+            }
+
+            try {
+                const userId = sessionStorage.getItem('userID');
+                if (!userId) {
+                    throw new Error('No user ID found');
+                }
+
+                const profileImage = document.getElementById('profile-image');
+                profileImage.style.opacity = '0.5'; // Show loading state
+
+                // Create a storage reference with timestamp
+                const timestamp = new Date().getTime();
+                const fileExtension = file.name.split('.').pop();
+                const storagePath = `profile-pictures/${userId}_${timestamp}.${fileExtension}`;
+                const imageRef = storageRef(storage, storagePath);
+
+                // Upload file to Firebase Storage
+                await uploadBytes(imageRef, file);
+                
+                // Get the download URL
+                const downloadURL = await getDownloadURL(imageRef);
+
+                // Update the database with the new URL
+                const userRef = ref(db, `users/${userId}`);
+                await update(userRef, {
+                    profilePictureURL: downloadURL,
+                    profilePicturePath: storagePath
+                });
+
+                // Update the image display
+                profileImage.src = downloadURL;
+                profileImage.style.opacity = '1';
+
+                // Update session storage with new URL
+                const userData = JSON.parse(sessionStorage.getItem('userData') || '{}');
+                userData.profilePictureURL = downloadURL;
+                userData.profilePicturePath = storagePath;
+                sessionStorage.setItem('userData', JSON.stringify(userData));
+
+                // Update success notification
+                showNotification('Profile picture updated successfully!');
+                
+            } catch (error) {
+                console.error('Error uploading image:', error);
+                showNotification('Error uploading image. Please try again.', true);
+                const profileImage = document.getElementById('profile-image');
+                profileImage.style.opacity = '1';
+                loadUserData(); // Reload the original picture
+            }
+        }
+    });
+
+    // Initialize the page
+    window.addEventListener('DOMContentLoaded', () => {
+        console.log('Profile page loaded, initializing...');
+        loadUserData();
+    });
+</script>
+
+<!-- Add Font Awesome for icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"> 
