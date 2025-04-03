@@ -1,12 +1,352 @@
 <html lang="en">
  <head>
   <meta charset="utf-8"/>
-  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
   <title>
    Overtime Recording
   </title>
   <script src="https://cdn.tailwindcss.com">
   </script>
+
+  <style>
+    /* Navigation Bar Styles */
+    .toggle-btn {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 1001;
+      background: #4a6cf7;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .navbar {
+      display: block;
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 250px;
+      background-color: white;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      transition: transform 0.3s ease;
+      padding: 20px 0;
+      transform: translateX(-100%); /* Hide it off-screen initially */
+      overflow-y: auto; /* Allow scrolling for small screens */
+    }
+
+    .navbar.active {
+      transform: translateX(0); /* Show it when active */
+    }
+
+    .navbar-header {
+      padding: 0 25px 20px;
+      border-bottom: 1px solid #eee;
+      margin-bottom: 15px;
+    }
+
+    .navbar-logo {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #4a6cf7;
+    }
+
+    .navbar ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .navbar li {
+      margin: 5px 0;
+    }
+
+    .navbar a {
+      display: flex;
+      align-items: center;
+      padding: 12px 25px;
+      color: #333;
+      text-decoration: none;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      border-left: 3px solid transparent;
+    }
+
+    .navbar a svg {
+      width: 20px;
+      height: 20px;
+      margin-right: 10px;
+      flex-shrink: 0;
+    }
+
+    .navbar a:hover {
+      background-color: rgba(74, 108, 247, 0.1);
+      color: #4a6cf7;
+      border-left: 3px solid #4a6cf7;
+    }
+
+    .navbar a.active {
+      background-color: rgba(74, 108, 247, 0.1);
+      color: #4a6cf7;
+      border-left: 3px solid #4a6cf7;
+    }
+
+    .setting-item {
+      padding: 10px 25px;
+      margin-top: 10px;
+    }
+
+    .settings-btn {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      text-align: left;
+    }
+
+    .settings-btn:hover {
+      color: #4a6cf7;
+    }
+
+    .navbar .logout-link {
+      color: #dc3545;
+      margin-top: 20px;
+      border-top: 1px solid #eee;
+      padding-top: 15px;
+    }
+
+    .navbar .logout-link:hover {
+      background-color: rgba(220, 53, 69, 0.1);
+      color: #dc3545;
+      border-left: 3px solid #dc3545;
+    }
+
+    /* Adjust main content when navbar is active */
+    .dashboard-container {
+      transition: margin-left 0.3s ease;
+    }
+
+    .dashboard-container.shifted {
+      margin-left: 250px;
+    }
+
+    /* Main container styles */
+    .main-container {
+      min-height: 100vh;
+      padding-bottom: 2rem;
+    }
+
+    /* Time input group styles */
+    .time-input-group {
+      display: flex;
+      align-items: center;
+    }
+
+    /* Submit and clear button styles */
+    .button-container {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+    }
+
+    /* Notification container styles */
+    #notificationContainer {
+      transition: all 0.3s ease;
+    }
+
+    /* Responsive styles */
+    @media (max-width: 768px) {
+      .navbar {
+        width: 100%;
+        transform: translateX(-100%);
+      }
+
+      .navbar.active {
+        transform: translateX(0);
+      }
+
+      .dashboard-container.shifted {
+        margin-left: 0;
+      }
+
+      /* Adjust content container for mobile */
+      .bg-white.p-6 {
+        margin-top: 20px; /* Give space for the toggle button */
+        width: 100% !important;
+        max-width: 100% !important;
+        border-radius: 0.5rem;
+        padding: 1rem !important;
+      }
+      
+      /* Adjust form layout for mobile */
+      .grid.grid-cols-1.md\:grid-cols-2 {
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem !important;
+      }
+      
+      /* Make inputs and selects larger for touch on mobile */
+      input, select, button[type="button"], button[type="submit"], button[type="reset"] {
+        min-height: 44px; /* Minimum touch target size */
+        font-size: 16px !important; /* Prevent iOS zoom on focus */
+      }
+      
+      /* Handle time input containers better on mobile */
+      .flex.items-center.space-x-2 {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+      
+      .flex.items-center.space-x-2 > * {
+        margin: 0 !important;
+      }
+      
+      .flex.items-center.space-x-2 input, 
+      .flex.items-center.space-x-2 select {
+        width: 100% !important;
+        max-width: none !important;
+      }
+      
+      /* Improve table visibility on mobile */
+      .overflow-x-auto {
+        margin: 0 -1rem;
+        padding: 0 1rem;
+        width: calc(100% + 2rem);
+      }
+      
+      table {
+        width: 100%;
+      }
+      
+      /* Adjust spacing in header */
+      .flex.justify-between.items-center.mb-4 {
+        margin-bottom: 1rem;
+      }
+      
+      /* Make buttons more mobile-friendly */
+      button.rounded, 
+      button.rounded-lg {
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
+      }
+      
+      /* Adjust image size */
+      img.h-12 {
+        height: 40px;
+      }
+
+      /* Better time inputs on mobile */
+      .time-input-group {
+        display: flex;
+        align-items: center;
+        width: 100%;
+      }
+
+      .time-input-group input {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .time-input-group span {
+        flex-shrink: 0;
+      }
+
+      /* Make button container stack on mobile */
+      .flex.justify-center.space-x-4 {
+        flex-direction: column;
+        width: 100%;
+      }
+
+      .flex.justify-center.space-x-4 button {
+        width: 100%;
+        margin: 0.5rem 0 !important;
+      }
+    }
+    
+    /* Small mobile adjustments */
+    @media (max-width: 480px) {
+      .toggle-btn {
+        top: 10px;
+        left: 10px;
+      }
+      
+      body {
+        padding-top: 0;
+      }
+      
+      .flex.justify-between.items-center {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+      }
+      
+      .flex.space-x-2, .flex.justify-end, .flex.justify-center.space-x-4 {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      
+      .flex.space-x-2 button, .flex.justify-end button, .flex.justify-center.space-x-4 button {
+        width: 100%;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+      }
+      
+      /* Format the time entry inputs better on small screens */
+      .overflow-x-auto table {
+        display: block;
+      }
+      
+      table th, table td {
+        padding: 0.5rem !important;
+      }
+      
+      /* Stack time inputs */
+      td .flex.items-center.space-x-2 {
+        display: grid;
+        grid-template-columns: 1fr 20px 1fr;
+        gap: 0.25rem;
+      }
+      
+      /* Make table headers more compact */
+      th {
+        white-space: nowrap;
+        font-size: 0.875rem;
+      }
+      
+      /* Adjust main title */
+      h2.text-2xl {
+        font-size: 1.5rem;
+        text-align: center;
+        margin: 0.5rem 0;
+      }
+
+      /* Notification container for small devices */
+      #notificationContainer .container {
+        padding: 0.5rem;
+      }
+      
+      #notificationText {
+        font-size: 0.75rem;
+        max-width: 85%;
+      }
+
+      /* Improve form layout on very small screens */
+      input[type="date"],
+      select,
+      input[type="text"] {
+        font-size: 14px !important;
+      }
+    }
+  </style>
 
 <script>
 
@@ -150,8 +490,99 @@
   </script>
  </head>
  
- <body class="bg-gray-100 flex items-center justify-center min-h-screen">
-  <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl">
+ <body class="bg-gray-100 min-h-screen">
+  <button class="toggle-btn" onclick="toggleNavbar()">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+      </svg>
+  </button>
+  
+  <nav class="navbar" id="navbar">
+      <div class="navbar-header">
+          <div class="navbar-logo">HR System</div>
+      </div>
+      <ul>
+          <li>
+              <a href="#" id="dashboardLink">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                  </svg>
+                  Dashboard
+              </a>
+          </li>
+          <li>
+              <a href="#" onclick="goToProfilePage()">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                  </svg>
+                  Profile
+              </a>
+          </li>
+          <li>
+              <a href="otrecording.html" class="active">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                 Overtime Form
+              </a>
+          </li>
+          <li>
+              <a href="appforleave.html">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                  </svg>
+               Leave Form
+              </a>
+          </li>
+          <li>
+              <a href="data.html">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                  </svg>
+                  For OT Data
+              </a>
+          </li>
+          <li>
+              <a href="dataforleave.html">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                  </svg>
+                  For Leave Data
+              </a>
+          </li>
+      </ul>
+      <div class="setting-item">
+          <a href="#" onclick="window.location.href = './settings.html'" class="settings-btn">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="20" height="20" style="margin-right: 10px;">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              </svg>  
+              General Settings
+          </a>
+      </div>
+      <div class="setting-item">
+          <a href="#" onclick="logout()" class="logout-link">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="20" height="20" style="margin-right: 10px;">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+              </svg>
+              Logout
+          </a>
+      </div>
+  </nav>
+  <div class="main-container flex justify-center items-start p-4 pt-16 md:p-6 md:pt-6">
+    <!-- Notification Container -->
+    <div id="notificationContainer" class="hidden fixed top-0 left-0 right-0 bg-green-100 border-b border-green-200 z-50">
+      <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+        <p id="notificationText" class="text-green-800 text-sm"></p>
+        <button id="closeNotification" class="text-green-800 hover:text-green-900">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+          </svg>
+        </button>
+      </div>
+    </div>
+    
+    <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl">
    <div class="flex justify-between items-center mb-4">
     <div class="flex space-x-2">
      <button class="bg-green-500 text-white px-4 py-2 rounded">
@@ -275,8 +706,8 @@
 
     <div class="mb-6">
       <h3 class="text-lg font-semibold mb-3">Time Entry</h3>
-      <div class="overflow-x-auto">
-        <table class="w-full border-collapse bg-white shadow-sm rounded-lg">
+      <div class="overflow-x-auto bg-white shadow-sm rounded-lg">
+        <table class="w-full border-collapse">
           <thead>
             <tr class="bg-gray-50">
               <th class="border p-3 text-left">Start Time</th>
@@ -288,15 +719,17 @@
             <tr>
               <td class="border p-3">
                 <div class="flex items-center space-x-2">
-                  <input type="number" min="1" max="12" value="08" 
-                         name="startHour"
-                         class="start-hour border border-gray-300 rounded p-2 w-16 text-center"
-                         placeholder="HH">
-                  <span class="text-gray-500">:</span>
-                  <input type="number" min="0" max="59" value="00" 
-                         name="startMinute"
-                         class="start-minute border border-gray-300 rounded p-2 w-16 text-center"
-                         placeholder="MM">
+                  <div class="time-input-group">
+                    <input type="number" min="1" max="12" value="08" 
+                           name="startHour"
+                           class="start-hour border border-gray-300 rounded p-2 w-16 text-center"
+                           placeholder="HH">
+                    <span class="text-gray-500 mx-1">:</span>
+                    <input type="number" min="0" max="59" value="00" 
+                           name="startMinute"
+                           class="start-minute border border-gray-300 rounded p-2 w-16 text-center"
+                           placeholder="MM">
+                  </div>
                   <select name="startPeriod" class="start-period border border-gray-300 rounded p-2 w-20">
                     <option value="AM" selected>AM</option>
                     <option value="PM">PM</option>
@@ -305,15 +738,17 @@
               </td>
               <td class="border p-3">
                 <div class="flex items-center space-x-2">
-                  <input type="number" min="1" max="12" value="05" 
-                         name="endHour"
-                         class="end-hour border border-gray-300 rounded p-2 w-16 text-center"
-                         placeholder="HH">
-                  <span class="text-gray-500">:</span>
-                  <input type="number" min="0" max="59" value="00" 
-                         name="endMinute"
-                         class="end-minute border border-gray-300 rounded p-2 w-16 text-center"
-                         placeholder="MM">
+                  <div class="time-input-group">
+                    <input type="number" min="1" max="12" value="05" 
+                           name="endHour"
+                           class="end-hour border border-gray-300 rounded p-2 w-16 text-center"
+                           placeholder="HH">
+                    <span class="text-gray-500 mx-1">:</span>
+                    <input type="number" min="0" max="59" value="00" 
+                           name="endMinute"
+                           class="end-minute border border-gray-300 rounded p-2 w-16 text-center"
+                           placeholder="MM">
+                  </div>
                   <select name="endPeriod" class="end-period border border-gray-300 rounded p-2 w-20">
                     <option value="AM">AM</option>
                     <option value="PM" selected>PM</option>
@@ -353,7 +788,7 @@
         
     </div>
 
-    <div class="flex justify-center space-x-4">
+    <div class="button-container">
       <button type="submit" 
               class="bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
         SUBMIT
@@ -365,10 +800,12 @@
     </div>
    </form>
   </div>
- </body>
+ </div>
+</div>
 
 
- <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js"></script>
   <script type="module">
    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
@@ -530,7 +967,8 @@
           otStart: startTime,
           otEnd: endTime,
           totalHours: totalHours,
-          status: 'Pending',
+          AdminApproval: 'Pending',
+          HRApproval: 'Pending',
           timestamp: new Date().toISOString()
         };
 
@@ -614,6 +1052,33 @@
 <script>
   // Check for notification when page loads
   document.addEventListener('DOMContentLoaded', function() {
+    // Check for user login and redirect based on role if needed
+    const userId = sessionStorage.getItem('userID');
+    if (!userId) {
+      alert('Please login first');
+      window.location.href = 'login.html';
+      return;
+    }
+
+    // Set up role-based dashboard link
+    const userData = JSON.parse(sessionStorage.getItem('userData') || '{}');
+    const userRole = userData.role || '';
+    const dashboardLink = document.getElementById('dashboardLink');
+    
+    if (dashboardLink) {
+      // Set href based on user role
+      if (userRole === 'Encoder') {
+        dashboardLink.href = 'dash-en.html';
+      } else if (userRole === 'Admin') {
+        dashboardLink.href = 'dash-admin.html';
+      } else if (userRole === 'hr') {
+        dashboardLink.href = 'dashhr.html';
+      } else {
+        // Default dashboard or login if role is unknown
+        dashboardLink.href = 'login.html';
+      }
+    }
+
     // Check if there's a notification to display
     const notification = sessionStorage.getItem('otNotification');
     if (notification) {
@@ -641,6 +1106,51 @@
       });
     }
   });
+
+  // Toggle navbar functionality
+  function toggleNavbar() {
+    const navbar = document.getElementById('navbar');
+    const container = document.querySelector('.dashboard-container');
+    navbar.classList.toggle('active');
+    if (container) {
+      container.classList.toggle('shifted');
+    }
+  }
+
+  // Profile page navigation
+  function goToProfilePage() {
+    const userId = sessionStorage.getItem('userID');
+    if (userId) {
+      window.location.href = `profile.html?userId=${userId}`;
+    } else {
+      alert('Please login first');
+      window.location.href = 'login.html';
+    }
+  }
+
+  // Logout functionality
+  function logout() {
+    sessionStorage.removeItem('userID');
+    sessionStorage.removeItem('userData');
+    window.location.href = 'login.html';
+  }
+
+  // Close navbar when clicking outside
+  document.addEventListener('click', function(event) {
+    const navbar = document.getElementById('navbar');
+    const toggleBtn = document.querySelector('.toggle-btn');
+    
+    if (navbar.classList.contains('active') && 
+        !navbar.contains(event.target) && 
+        !toggleBtn.contains(event.target)) {
+      navbar.classList.remove('active');
+      const container = document.querySelector('.dashboard-container');
+      if (container) {
+        container.classList.remove('shifted');
+      }
+    }
+  });
 </script>
    
+</body>
 </html>
